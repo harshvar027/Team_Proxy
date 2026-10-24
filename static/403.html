@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#fbfbfd">
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#000000">
+  <title>Access denied · Baari</title>
+  <link rel="icon" type="image/png" href="assets/favicon.png">
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/motion.css">
+  <link rel="stylesheet" href="css/pages.css">
+  <script type="module" src="js/theme.js"></script>
+  <script type="module" src="js/i18n.js"></script>
+  <script type="module" src="js/motion.js"></script>
+  <script type="module" src="js/ui.js"></script>
+  <script type="module" src="js/error-page.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main" data-i18n="skip">Skip to content</a>
+  <header class="nav" data-nav>
+    <div class="nav-inner">
+      <a class="nav-brand" href="index.html">
+        <img class="brand-logo" src="assets/logo.png" alt="Baari" width="44" height="44">
+        <span data-i18n="brand">Baari</span>
+      </a>
+      <div class="nav-actions">
+        <div class="lang-switch" role="group" data-i18n-aria="nav.language">
+          <button type="button" data-lang-btn="en">EN</button>
+          <button type="button" data-lang-btn="hi">हि</button>
+          <button type="button" data-lang-btn="mr">मर</button>
+        </div>
+        <button class="theme-toggle" type="button" data-theme-toggle data-i18n-aria="nav.toggleTheme">
+          <svg class="icon" aria-hidden="true"><use href="assets/icons.svg#sun"></use></svg>
+        </button>
+        <div data-auth-slot></div>
+      </div>
+    </div>
+  </header>
+  <main id="main" class="error-page" data-enter>
+    <p class="error-code">403</p>
+    <h1 class="title-1" data-i18n="errors.forbiddenTitle">You don’t have access</h1>
+    <p class="muted" data-i18n="errors.forbidden">This page is for staff or administrators.</p>
+    <a class="btn btn-primary" href="index.html" data-i18n="errors.home">Go home</a>
+  </main>
+</body>
+</html>

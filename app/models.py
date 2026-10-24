@@ -1,11 +1,9 @@
 """
 Baari — app/models.py
-SQLAlchemy ORM models for all 8 tables.
-No hard deletes — use `active` flags or `status` columns.
+SQLAlchemy ORM models for hospitals, departments, doctors, users, patients, tokens, and audit logs.
 """
 
 import datetime
-from functools import partial
 from sqlalchemy import (
     Column, Integer, String, Float, Boolean, DateTime, Date,
     ForeignKey, UniqueConstraint, Index, Text,
@@ -19,6 +17,29 @@ def _utcnow():
     return datetime.datetime.now(datetime.UTC)
 
 
+class Hospital(Base):
+    """
+    Hospital record with coordinator contact, location, and unique code.
+    Used for QR generation and multi-hospital queue scoping.
+    """
+    __tablename__ = "hospitals"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(150), nullable=False)
+    code = Column(String(30), nullable=False, unique=True)
+    location = Column(String(255), nullable=False)
+    coordinator_name = Column(String(100), nullable=False)
+    coordinator_phone = Column(String(30), nullable=False)
+    emergency_phone = Column(String(30), nullable=True)
+    email = Column(String(100), nullable=True)
+    description = Column(Text, nullable=True)
+    created_at = Column(DateTime, nullable=False, default=_utcnow)
+
+    departments = relationship("Department", back_populates="hospital", lazy="selectin")
+    users = relationship("User", back_populates="hospital", lazy="selectin")
+    tokens = relationship("Token", back_populates="hospital", lazy="dynamic")
+
+
 class Department(Base):
     __tablename__ = "departments"
 
@@ -28,7 +49,9 @@ class Department(Base):
     code = Column(String(10), nullable=False, unique=True)
     # Exponential moving average of service minutes; updated after each visit
     avg_service_minutes = Column(Float, nullable=False, default=8.0)
+    hospital_id = Column(Integer, ForeignKey("hospitals.id"), nullable=True)
 
+    hospital = relationship("Hospital", back_populates="departments")
     doctors = relationship("Doctor", back_populates="department", lazy="selectin")
     tokens = relationship("Token", back_populates="department", lazy="dynamic")
     staff_users = relationship("User", back_populates="department", lazy="dynamic")
@@ -47,29 +70,32 @@ class Doctor(Base):
 
 
 class User(Base):
-    """Staff or admin user. Patients do NOT have user accounts."""
+    """Staff, hospital admin, or patient user."""
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     username = Column(String(50), nullable=False, unique=True)
     password_hash = Column(String(255), nullable=False)
-    role = Column(String(10), nullable=False)  # "staff" or "admin"
-    # Staff are bound to exactly one department; admin has NULL
+    role = Column(String(20), nullable=False)  # "hospital", "patient", "staff", "admin"
+    hospital_id = Column(Integer, ForeignKey("hospitals.id"), nullable=True)
     department_id = Column(Integer, ForeignKey("departments.id"), nullable=True)
+    full_name = Column(String(100), nullable=True)
+    phone = Column(String(30), nullable=True)
     active = Column(Boolean, nullable=False, default=True)
-    must_change_password = Column(Boolean, nullable=False, default=True)
+    must_change_password = Column(Boolean, nullable=False, default=False)
     failed_logins = Column(Integer, nullable=False, default=0)
     locked_until = Column(DateTime, nullable=True)
     created_at = Column(DateTime, nullable=False, default=_utcnow)
     last_login = Column(DateTime, nullable=True)
 
+    hospital = relationship("Hospital", back_populates="users")
     department = relationship("Department", back_populates="staff_users")
     issued_tokens = relationship("Token", back_populates="issued_by_user", lazy="dynamic")
     audit_entries = relationship("AuditLog", back_populates="actor", lazy="dynamic")
 
 
 class Patient(Base):
-    """Minimal patient record — name and optional phone/email. No health data."""
+    """Minimal patient record — name and optional phone/email."""
     __tablename__ = "patients"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -84,7 +110,10 @@ class Patient(Base):
 class Token(Base):
     """
     A queue token for one patient visit in one department on one day.
-    Token numbers restart daily per department, formatted like G-07.
+    Priority classes:
+      - emergency: Level 1 (immediate attention)
+      - daily_life: Level 2 (urgent daily life problem / high fever / severe pain)
+      - routine: Level 3 (routine checkup / standard consult)
     """
     __tablename__ = "tokens"
     __table_args__ = (
@@ -97,8 +126,10 @@ class Token(Base):
     service_date = Column(Date, nullable=False, default=datetime.date.today)
     department_id = Column(Integer, ForeignKey("departments.id"), nullable=False)
     patient_id = Column(Integer, ForeignKey("patients.id"), nullable=False)
-    priority_class = Column(String(20), nullable=False, default="normal")  # normal, priority, emergency
-    priority_reason = Column(String(255), nullable=True)  # required if priority_class != "normal"
+    hospital_id = Column(Integer, ForeignKey("hospitals.id"), nullable=True)
+    priority_class = Column(String(20), nullable=False, default="routine")  # emergency, daily_life, routine (legacy: priority, normal)
+    priority_reason = Column(String(255), nullable=True)
+    symptoms = Column(Text, nullable=True)  # AI triage extracted reason/symptoms
     status = Column(String(20), nullable=False, default="waiting")  # waiting, called, done, no_show
     pin_hash = Column(String(255), nullable=False)  # argon2id hash of 4-digit PIN
     issued_by_user_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # NULL = self-service
@@ -106,6 +137,7 @@ class Token(Base):
     called_at = Column(DateTime, nullable=True)
     finished_at = Column(DateTime, nullable=True)
 
+    hospital = relationship("Hospital", back_populates="tokens")
     department = relationship("Department", back_populates="tokens")
     patient = relationship("Patient", back_populates="tokens")
     issued_by_user = relationship("User", back_populates="issued_tokens")
@@ -129,7 +161,6 @@ class ServiceLog(Base):
 class AuditLog(Base):
     """
     Immutable audit trail. Logs every security and operational event.
-    actor_user_id is NULL for unauthenticated actions (failed login of unknown user).
     """
     __tablename__ = "audit_logs"
     __table_args__ = (

@@ -1,1009 +1,281 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Baari (बारी) — Hospital OPD Queue Management System</title>
-  <meta name="description" content="Baari: Come at your time, not at 4 AM. Self-hosted, accessible OPD queue management with voice token generation in Hindi, Marathi, and English.">
-  <link rel="stylesheet" href="/static/css/style.css">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏥</text></svg>">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#fbfbfd">
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#000000">
+  <title>Baari Healthcare · Calm, Intelligent Hospital OPD Queues</title>
+  <link rel="icon" type="image/png" href="assets/favicon.png">
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/motion.css">
+  <link rel="stylesheet" href="css/pages.css">
+  <script type="module" src="js/theme.js"></script>
+  <script type="module" src="js/i18n.js"></script>
+  <script type="module" src="js/motion.js"></script>
+  <script type="module" src="js/ui.js"></script>
+  <script type="module" src="js/index.js"></script>
+  <style>
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 20px;
+      margin: 32px 0;
+    }
+    .feature-card {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg, 18px);
+      padding: 24px;
+      box-shadow: var(--shadow-1);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .feature-icon {
+      font-size: 28px;
+      width: 48px; height: 48px; border-radius: 12px;
+      background: var(--surface-2);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .portal-banner {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg, 20px);
+      padding: 28px;
+      margin: 32px 0;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+    }
+  </style>
 </head>
 <body>
-  <!-- Ambient floating particles -->
-  <div id="particles-container" aria-hidden="true"></div>
-
-  <div class="app-container">
-
-    <!-- ── App Header ──────────────────────────────────────────────────────── -->
-    <header class="app-header">
-      <div class="brand">
-        <div class="brand-icon">ब</div>
-        <div>
-          <h1 class="brand-title" data-i18n="app_title">Baari (बारी)</h1>
-          <span class="brand-subtitle" data-i18n="tagline">Come at your time, not at 4 AM.</span>
-          <span id="live-clock" style="font-size:0.72rem; color:var(--text-dim); font-family:var(--font-mono); display:block; margin-top:0.2rem;"></span>
-        </div>
-      </div>
-
-      <nav class="nav-tabs" aria-label="Main Navigation">
-        <button class="tab-btn active" data-view="patient" id="nav-btn-patient">
-          <span data-i18n="nav_patient">🎫 Patient Kiosk & QR</span>
-        </button>
-        <button class="tab-btn" data-view="staff" id="nav-btn-staff">
-          <span data-i18n="nav_staff">📋 Staff Console</span>
-        </button>
-        <button class="tab-btn" data-view="display" id="nav-btn-display">
-          <span>📺 Hall TV Display</span>
-        </button>
-        <button class="tab-btn" data-view="qrhub" id="nav-btn-qrhub">
-          <span>🖨️ Hospital QR Poster</span>
-        </button>
-        <button class="tab-btn" data-view="simulation" id="nav-btn-sim">
-          <span data-i18n="nav_sim">📊 OPD Simulation</span>
-        </button>
-        <button class="tab-btn" data-view="admin" id="nav-btn-admin">
-          <span data-i18n="nav_admin">⚙️ Admin Control</span>
-        </button>
+  <a class="skip-link" href="#main" data-i18n="skip">Skip to content</a>
+  <div class="offline-banner" id="offline-banner" hidden data-i18n="errors.offline">You’re offline. We’ll keep trying.</div>
+  
+  <header class="nav" data-nav>
+    <div class="nav-inner">
+      <a class="nav-brand" href="index.html">
+        <img class="brand-logo" src="assets/logo.png" alt="Baari" width="44" height="44">
+        <span data-i18n="brand">Baari Healthcare</span>
+      </a>
+      <nav class="nav-links" aria-label="Primary">
+        <a class="nav-link is-active" href="index.html" data-i18n="nav.home">Home</a>
+        <a class="nav-link" href="token.html" data-i18n="nav.getToken">Get a token</a>
+        <a class="nav-link" href="status.html" data-i18n="nav.checkTurn">Check my turn</a>
       </nav>
-
-      <div class="header-actions">
-        <button class="btn btn-secondary" style="padding:0.35rem 0.75rem; font-size:0.78rem;" onclick="window.testBaariSpeech(currentLang || 'hi')" title="Test Natural Speech (Edge-TTS)">
-          🔊 Voice Test
+      <div class="nav-actions">
+        <div class="lang-switch" role="group" data-i18n-aria="nav.language">
+          <button type="button" data-lang-btn="en">EN</button>
+          <button type="button" data-lang-btn="hi">हि</button>
+          <button type="button" data-lang-btn="mr">मर</button>
+        </div>
+        <button class="theme-toggle" type="button" data-theme-toggle data-i18n-aria="nav.toggleTheme">
+          <svg class="icon" aria-hidden="true"><use href="assets/icons.svg#sun"></use></svg>
         </button>
-        <select id="lang-select" class="lang-selector" aria-label="Select Language">
-          <option value="en">English (EN)</option>
-          <option value="hi">हिंदी (Hindi)</option>
-          <option value="mr">मराठी (Marathi)</option>
-        </select>
-        <button class="icon-btn" id="toggle-hc" title="High Contrast Mode" aria-label="Toggle High Contrast">
-          👁️
-        </button>
-        <button class="icon-btn" id="toggle-theme" title="Toggle Light/Dark Theme" aria-label="Toggle Theme">
-          🌙
-        </button>
-        <div id="header-user-status"></div>
-      </div>
-    </header>
-
-    <!-- ── Demo Credentials Quick-Bar ─────────────────────────────────────── -->
-    <div class="demo-banner">
-      <div class="demo-banner-content">
-        <strong style="color:var(--color-primary-light,#818cf8);">⚡ Quick Demo Logins:</strong>
-        <button class="demo-pill-btn" onclick="BaariApp.openLoginModal('admin', 'BaariAdmin@2024')">
-          👑 Admin (admin / BaariAdmin@2024)
-        </button>
-        <button class="demo-pill-btn" onclick="BaariApp.openLoginModal('staff_g', 'StaffPass@2024')">
-          🩺 Staff: General Med (staff_g / StaffPass@2024)
-        </button>
-        <button class="demo-pill-btn" onclick="BaariApp.openLoginModal('staff_o', 'StaffPass@2024')">
-          🦴 Staff: Ortho (staff_o / StaffPass@2024)
-        </button>
-      </div>
-      <div style="color:var(--text-dim); font-size:0.75rem;">
-        Tokens get a <strong style="color:#fbbf24;">random 4-digit PIN</strong> shown after generation
+        <div data-auth-slot></div>
       </div>
     </div>
+  </header>
 
-    <!-- ── Main Views ──────────────────────────────────────────────────────── -->
-    <main class="main-content">
+  <main id="main">
+    <section class="page home-hero">
+      <div class="hero-chip" style="margin-bottom:16px;display:inline-flex;align-items:center;gap:8px;padding:6px 14px;border-radius:999px;border:1px solid var(--line);color:var(--accent);font-size:13px;font-weight:700">
+        <img class="brand-logo" src="assets/logo.png" alt="" width="22" height="22" style="width:22px;height:22px;padding:1px;border-radius:6px">
+        <span>🏥 Smart AI Healthcare Triage & Queue Platform</span>
+      </div>
+      <h1 class="display" data-enter data-i18n="home.title">Come at your time, not at dawn.</h1>
+      <p data-enter data-i18n="home.subtitle" style="max-width:580px;margin:0 auto 24px">
+        Intelligent hospital OPD check-in with AI symptom triage, 3-tier priority categorization (Emergency, Daily Life Problems, Routine), and direct coordinator phone support.
+      </p>
+      <div class="cluster" style="justify-content:center;gap:14px" data-enter>
+        <a class="btn btn-primary btn-lg" style="min-width:200px" href="token.html">Get Patient Token &rarr;</a>
+        <a class="btn btn-secondary btn-lg" style="min-width:180px" href="login.html">Sign In / Register</a>
+      </div>
+      <div class="home-stats" data-enter>
+        <article class="home-stat">
+          <span class="caption">Queue style</span>
+          <strong>Come at your time</strong>
+          <p class="muted" style="margin:6px 0 0;font-size:13px">PIN-protected tokens replace the 4 AM corridor wait.</p>
+        </article>
+        <article class="home-stat">
+          <span class="caption">Triage</span>
+          <strong>3 urgency levels</strong>
+          <p class="muted" style="margin:6px 0 0;font-size:13px">Emergency, daily-life problems, then routine checkups.</p>
+        </article>
+        <article class="home-stat">
+          <span class="caption">Support</span>
+          <strong>Coordinator on call</strong>
+          <p class="muted" style="margin:6px 0 0;font-size:13px">Every hospital lists a human helpline on the token.</p>
+        </article>
+        <article class="home-stat">
+          <span class="caption">Hospitals live</span>
+          <strong id="home-hospital-count">—</strong>
+          <p class="muted" style="margin:6px 0 0;font-size:13px">Scan a poster QR or pick a clinic from the list.</p>
+        </article>
+      </div>
+      <div class="trust-strip" data-enter>
+        <article class="trust-item">
+          <span class="caption">Languages</span>
+          <strong>EN · हिन्दी · मराठी</strong>
+          <p class="muted" style="margin:6px 0 0;font-size:13px">Speak or type symptoms in the language you use at home.</p>
+        </article>
+        <article class="trust-item">
+          <span class="caption">PIN privacy</span>
+          <strong>Token + 4-digit PIN</strong>
+          <p class="muted" style="margin:6px 0 0;font-size:13px">Status is locked to the number you were given at check-in.</p>
+        </article>
+        <article class="trust-item">
+          <span class="caption">Poster QR</span>
+          <strong>Scan at the gate</strong>
+          <p class="muted" style="margin:6px 0 0;font-size:13px">Hospital QR opens this check-in flow with the clinic already selected.</p>
+        </article>
+        <article class="trust-item">
+          <span class="caption">Night duty</span>
+          <strong>Dark-mode boards</strong>
+          <p class="muted" style="margin:6px 0 0;font-size:13px">Staff and patients keep readable cards after sunset.</p>
+        </article>
+      </div>
+    </section>
 
-      <!-- ==================================================================
-           VIEW 1: PATIENT KIOSK & STATUS TRACKER
-           ================================================================== -->
-      <section id="view-patient" class="view-section active">
-
-        <!-- Sub-tabs: Self-Service vs QR Scan -->
-        <div class="sub-tabs">
-          <button class="sub-tab-btn active" data-subtab="self-service" onclick="BaariPatient.switchSubTab('self-service')">
-            🎫 Self-Service Token
-          </button>
-          <button class="sub-tab-btn" data-subtab="qr-scan" onclick="BaariPatient.switchSubTab('qr-scan')">
-            📱 Scan Hospital QR
-          </button>
-          <button class="sub-tab-btn" data-subtab="track-status" onclick="BaariPatient.switchSubTab('track-status')">
-            📍 Track Your Turn
-          </button>
-        </div>
-
-        <!-- Sub-tab 1: Self-Service Token -->
-        <div id="subtab-self-service" class="sub-tab-content active">
-          <div class="kiosk-grid">
-            <!-- Left Column: Request Token -->
-            <div class="card">
-              <div class="card-header">
-                <h2 class="card-title" data-i18n="kiosk_heading">🎫 Get Your OPD Turn</h2>
-              </div>
-              <p style="color:var(--text-muted); font-size:0.88rem; margin-bottom:1.25rem;" data-i18n="kiosk_sub">
-                Speak in your mother tongue or type below. No smartphone app needed.
-              </p>
-
-              <!-- Voice Input -->
-              <div class="voice-kiosk-box" id="voice-box">
-                <button class="mic-circle" id="mic-btn" type="button" onclick="BaariPatient.toggleVoice()" aria-label="Activate Voice Token Request">
-                  🎤
-                </button>
-                <div class="voice-status-text" id="voice-status" data-i18n="voice_mic_idle">
-                  Tap to Speak (Voice Token)
-                </div>
-                <div class="voice-hint-examples" data-i18n="voice_mic_help">
-                  Try: "My name is Rahul, I have a fever" or "हड्डी के डॉक्टर को दिखाना है"
-                </div>
-              </div>
-
-              <div class="divider-text" data-i18n="or_type">OR ENTER DETAILS MANUALLY</div>
-
-              <!-- Manual Form -->
-              <form id="token-form">
-                <div class="form-group">
-                  <label class="form-label" for="patient-name" data-i18n="label_name">Patient Name *</label>
-                  <input class="form-control" type="text" id="patient-name" required placeholder="e.g. Ramesh Kumar">
-                </div>
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.75rem;">
-                  <div class="form-group">
-                    <label class="form-label" for="patient-phone" data-i18n="label_phone">Mobile Number</label>
-                    <input class="form-control" type="tel" id="patient-phone" placeholder="10-digit mobile number">
-                  </div>
-                  <div class="form-group">
-                    <label class="form-label" for="patient-email">Email Address</label>
-                    <input class="form-control" type="email" id="patient-email" placeholder="patient@example.com">
-                  </div>
-                </div>
-                <div class="form-group">
-                  <label class="form-label" for="patient-priority">Priority Category</label>
-                  <select class="form-control" id="patient-priority">
-                    <option value="normal" selected>Normal Queue</option>
-                    <option value="priority">Priority (Senior Citizen 60+ / Pregnant / Infant)</option>
-                    <option value="emergency">Emergency Triage</option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label class="form-label" data-i18n="label_dept">Select Department *</label>
-                  <div class="department-cards" id="dept-cards-container"></div>
-                </div>
-                <button class="btn btn-primary btn-large" type="submit" style="width:100%; margin-top:0.75rem;" data-i18n="btn_request_token">
-                  Generate Token & Arrival Time
-                </button>
-              </form>
-            </div>
-
-            <!-- Right Column: Quick Lookup & Active Card -->
-            <div>
-              <div class="card" style="margin-bottom:1.5rem;">
-                <div class="card-header">
-                  <h3 class="card-title" data-i18n="track_heading">🔍 Check Your Turn Status</h3>
-                </div>
-                <p style="color:var(--text-muted); font-size:0.85rem; margin-bottom:1rem;" data-i18n="track_sub">
-                  Enter your token number and PIN to see when to arrive.
-                </p>
-                <form onsubmit="BaariPatient.handleLookup(event)">
-                  <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.75rem; margin-bottom:0.75rem;">
-                    <div>
-                      <label class="form-label" for="lookup-token-num">Token Number</label>
-                      <input class="form-control" type="text" id="lookup-token-num" required placeholder="e.g. G-04">
-                    </div>
-                    <div>
-                      <label class="form-label" for="lookup-pin">4-Digit PIN</label>
-                      <input class="form-control" type="password" id="lookup-pin" required maxlength="4" placeholder="PIN">
-                    </div>
-                  </div>
-                  <button class="btn btn-secondary" type="submit" style="width:100%;" data-i18n="btn_check_status">
-                    Check Status
-                  </button>
-                </form>
-              </div>
-
-              <!-- Live Active Token Status Card -->
-              <div class="card" id="live-status-card" style="display:none;">
-                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:1rem;">
-                  <div>
-                    <div style="font-size:0.78rem; font-weight:700; color:var(--text-muted);" id="live-dept-name">General Medicine</div>
-                    <div style="font-size:1.1rem; font-weight:800; color:var(--text-main);" id="live-patient-name">Patient Name</div>
-                  </div>
-                  <div style="text-align:right;">
-                    <div style="font-family:var(--font-mono); font-size:2.2rem; font-weight:900;" id="live-token-num" class="token-big-num">G-01</div>
-                    <div style="font-size:0.78rem; color:#34d399; font-weight:700;" id="live-queue-pos"></div>
-                  </div>
-                </div>
-
-                <!-- Stepper -->
-                <div class="stepper-container">
-                  <div class="stepper">
-                    <div class="step-item" id="step-1">
-                      <div class="step-circle">1</div>
-                      <div class="step-label" data-i18n="stepper_1">Token</div>
-                    </div>
-                    <div class="step-item" id="step-2">
-                      <div class="step-circle">2</div>
-                      <div class="step-label" data-i18n="stepper_2">Home</div>
-                    </div>
-                    <div class="step-item" id="step-3">
-                      <div class="step-circle">3</div>
-                      <div class="step-label" data-i18n="stepper_3">Travel</div>
-                    </div>
-                    <div class="step-item" id="step-4">
-                      <div class="step-circle">4</div>
-                      <div class="step-label" data-i18n="stepper_4">Cabin</div>
-                    </div>
-                  </div>
-                </div>
-
-                <div id="live-advice-box" style="background:var(--bg-glass); padding:1rem; border-radius:var(--radius-lg); border:1px solid var(--border-subtle); margin:1rem 0; text-align:center;"></div>
-
-                <!-- Travel Time Buffer Slider -->
-                <div style="margin-top:1.25rem; border-top:1px solid var(--border-subtle); padding-top:1rem;">
-                  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.4rem;">
-                    <span style="font-size:0.85rem; font-weight:600; color:var(--text-muted);" data-i18n="travel_slider_label">
-                      Adjust your travel time from home:
-                    </span>
-                    <strong style="color:var(--color-primary-light,#818cf8); font-size:0.9rem;" id="travel-slider-val">15 min</strong>
-                  </div>
-                  <input type="range" id="travel-slider" min="5" max="90" step="5" value="15">
-                  <div style="display:flex; justify-content:space-between; font-size:0.72rem; color:var(--text-dim); margin-top:0.25rem;">
-                    <span>5m (Nearby)</span>
-                    <span>45m</span>
-                    <span>90m (Far)</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Sub-tab 2: QR Scan Registration -->
-        <div id="subtab-qr-scan" class="sub-tab-content">
-          <div class="card" style="max-width:720px; margin:0 auto;">
-            <div class="card-header">
-              <button class="btn btn-secondary" style="margin-bottom:1rem;" onclick="BaariPatient.switchSubTab('self-service')">&larr; Back</button>
-              <h2 class="card-title">📱 Scan Hospital QR to Register</h2>
-            </div>
-            <p style="color:var(--text-muted); font-size:0.88rem; margin-bottom:1.5rem;">
-              Point your camera at the hospital counter QR code, upload a photo, or click a demo hospital below.
-            </p>
-
-            <!-- Scanner Box with High-Tech Viewfinder -->
-            <div class="qr-scanner-box">
-              <div class="qr-viewfinder" id="qr-viewfinder">
-                <span class="viewfinder-corner corner-tl"></span>
-                <span class="viewfinder-corner corner-tr"></span>
-                <span class="viewfinder-corner corner-bl"></span>
-                <span class="viewfinder-corner corner-br"></span>
-                <div class="laser-scanner" id="qr-scanner-laser" style="display:none;"></div>
-                <video id="qr-scanner-video" autoplay playsinline muted></video>
-                <canvas id="qr-scanner-canvas" style="display:none;"></canvas>
-                <div class="viewfinder-placeholder" id="qr-placeholder">
-                  <div style="font-size:3rem; margin-bottom:0.5rem;">📷</div>
-                  <div style="font-weight:700; color:var(--text-main);">Hospital QR Scanner</div>
-                  <div style="font-size:0.8rem; color:var(--text-muted); margin-top:0.25rem;">Camera is inactive</div>
-                </div>
-              </div>
-
-              <!-- Action Controls -->
-              <div style="display:flex; justify-content:center; gap:0.75rem; flex-wrap:wrap; margin-top:1.25rem;">
-                <button class="btn btn-primary btn-large" id="qr-scan-start-btn" onclick="BaariPatient.startQRScanner()">
-                  📷 Start Camera & Scan QR
-                </button>
-                <button class="btn btn-danger btn-large" id="qr-scan-stop-btn" style="display:none;" onclick="BaariPatient.stopQRScanner()">
-                  ⏹ Stop Camera
-                </button>
-                <label class="btn btn-secondary" style="cursor:pointer; display:inline-flex; align-items:center;">
-                  📁 Upload QR Image
-                  <input type="file" id="qr-file-input" accept="image/*" style="display:none;" onchange="BaariPatient.handleQRImageUpload(event)">
-                </label>
-              </div>
-            </div>
-
-            <!-- Instant One-Click Test Chips -->
-            <div style="margin:1.75rem 0 1.25rem 0; padding:1.25rem; background:var(--bg-glass); border-radius:var(--radius-lg); border:1px solid var(--border-subtle);">
-              <div style="font-size:0.82rem; font-weight:800; color:var(--color-primary-light,#818cf8); text-transform:uppercase; letter-spacing:1px; margin-bottom:0.6rem;">
-                ⚡ One-Click Hospital Demo Scans (No Camera Needed):
-              </div>
-              <div style="display:flex; flex-wrap:wrap; gap:0.5rem;">
-                <button type="button" class="preset-chip" onclick="BaariPatient.testScanPreset('District Civil Hospital (Main Campus)', 'BAARI-GH-PUNE-01', 'G')">
-                  🏥 Civil Hospital (General Med)
-                </button>
-                <button type="button" class="preset-chip" onclick="BaariPatient.testScanPreset('District Civil Hospital (Main Campus)', 'BAARI-GH-PUNE-01', 'O')">
-                  🦴 Civil Hospital (Orthopedics)
-                </button>
-                <button type="button" class="preset-chip" onclick="BaariPatient.testScanPreset('AIIMS Community OPD Center', 'BAARI-AIIMS-DEL-02', 'P')">
-                  👶 AIIMS (Pediatrics)
-                </button>
-                <button type="button" class="preset-chip" onclick="BaariPatient.testScanPreset('KEM Memorial Hospital & Research', 'BAARI-KEM-MUM-03', 'Y')">
-                  🌸 KEM Hospital (Gynecology)
-                </button>
-              </div>
-            </div>
-
-            <!-- OR enter hospital code manually -->
-            <div class="divider-text">OR ENTER HOSPITAL CODE</div>
-            <div style="display:flex; gap:0.5rem; margin-bottom:1.5rem;">
-              <input class="form-control" type="text" id="manual-hospital-code" placeholder="e.g. BAARI-GH-PUNE-01">
-              <button class="btn btn-secondary" style="white-space:nowrap;" onclick="BaariPatient.lookupHospitalCode()">
-                Look Up Hospital
-              </button>
-            </div>
-
-            <!-- Verified Hospital Card (Appears after scan) -->
-            <div id="qr-verified-card" style="display:none; padding:1.25rem; background:var(--color-success-bg); border:1px solid rgba(16,185,129,0.35); border-radius:var(--radius-lg); margin-bottom:1.5rem; align-items:center; gap:1rem;">
-              <div style="font-size:2.2rem;">🏥</div>
-              <div style="flex:1;">
-                <div style="font-size:0.75rem; font-weight:800; color:#34d399; letter-spacing:1px;">✓ HOSPITAL VERIFIED</div>
-                <div style="font-size:1.2rem; font-weight:800; color:var(--text-main);" id="qr-hospital-name-display">—</div>
-                <div style="font-size:0.85rem; color:var(--text-muted);" id="qr-hospital-code-display">—</div>
-              </div>
-            </div>
-
-            <!-- QR Registration Form -->
-            <div id="qr-registration-section" style="display:none;">
-              <form id="qr-token-form" onsubmit="BaariPatient.handleQRRegistration(event)">
-                <div class="form-group">
-                  <label class="form-label" for="qr-patient-name">Your Full Name *</label>
-                  <input class="form-control" type="text" id="qr-patient-name" required placeholder="e.g. Rahul Sharma">
-                </div>
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.75rem;">
-                  <div class="form-group">
-                    <label class="form-label" for="qr-patient-phone">Phone Number *</label>
-                    <input class="form-control" type="tel" id="qr-patient-phone" required placeholder="10-digit mobile number">
-                  </div>
-                  <div class="form-group">
-                    <label class="form-label" for="qr-patient-email">Email Address</label>
-                    <input class="form-control" type="email" id="qr-patient-email" placeholder="rahul@example.com">
-                  </div>
-                </div>
-                <div class="form-group">
-                  <label class="form-label" for="qr-patient-priority">Priority Category</label>
-                  <select class="form-control" id="qr-patient-priority">
-                    <option value="normal" selected>Normal Queue</option>
-                    <option value="priority">Priority (Senior Citizen 60+ / Pregnant / Infant)</option>
-                    <option value="emergency">Emergency</option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label class="form-label">Select OPD Department *</label>
-                  <div class="department-cards" id="qr-dept-cards-container"></div>
-                </div>
-                <button class="btn btn-primary btn-large" type="submit" style="width:100%; margin-top:0.75rem;">
-                  🎫 Register Turn & Get Token
-                </button>
-              </form>
-            </div>
-          </div>
-        </div>
-
-        <!-- Sub-tab 3: Track Status -->
-        <div id="subtab-track-status" class="sub-tab-content">
-          <div class="card" style="max-width:640px; margin:0 auto;">
-            <div class="card-header">
-              <button class="btn btn-secondary" style="margin-bottom:1rem;" onclick="BaariPatient.switchSubTab('self-service')">&larr; Back</button>
-              <h2 class="card-title">📍 Track Your Queue Position</h2>
-            </div>
-            <p style="color:var(--text-muted); font-size:0.88rem; margin-bottom:1.5rem;">
-              Enter your token number and 4-digit PIN to see your live queue status and when to leave home.
-            </p>
-            <form onsubmit="BaariPatient.handleLookup(event, true)">
-              <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.75rem; margin-bottom:0.75rem;">
-                <div>
-                  <label class="form-label" for="track-token-num">Token Number</label>
-                  <input class="form-control" type="text" id="track-token-num" required placeholder="e.g. G-04">
-                </div>
-                <div>
-                  <label class="form-label" for="track-pin">4-Digit PIN</label>
-                  <input class="form-control" type="password" id="track-pin" required maxlength="4" placeholder="PIN">
-                </div>
-              </div>
-              <button class="btn btn-primary btn-large" type="submit" style="width:100%;">
-                📍 Track My Turn
-              </button>
-            </form>
-
-            <div id="track-status-result" style="margin-top:1.5rem; display:none;">
-              <div id="track-status-content"></div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- ==================================================================
-           VIEW 2: STAFF CONSOLE
-           ================================================================== -->
-      <section id="view-staff" class="view-section">
-        <div class="view-back-bar" style="margin-bottom:1rem;">
-          <button class="btn btn-secondary" style="font-size:0.82rem; padding:0.35rem 0.9rem;" onclick="BaariApp.navigateTo('patient')" aria-label="Back to Home">&larr; Home</button>
-        </div>
-        <div id="staff-login-warning" class="card" style="text-align:center; padding:3rem; display:none;">
-          <div class="empty-state-icon">🔒</div>
-          <h3 style="margin-bottom:0.75rem;">Staff Login Required</h3>
-          <p style="color:var(--text-muted); margin-bottom:1.5rem;">
-            Please log in with your department staff credentials to manage the queue.
+    <!-- Key Highlights -->
+    <section class="page" data-reveal style="padding-top:0">
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon">🤖</div>
+          <h3 class="headline" style="margin:0">AI Symptom Triage</h3>
+          <p class="muted" style="margin:0;font-size:14px">
+            Speak or type your complaints in English, Hindi, or Marathi. Our clinical AI extracts your symptoms, identifies emergency signs, and recommends the right OPD counter.
           </p>
-          <button class="btn btn-primary" onclick="BaariApp.openLoginModal('staff_g', 'StaffPass@2024')">
-            Log in as Demo Staff
-          </button>
         </div>
-
-        <div id="staff-console-content">
-          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem; margin-bottom:1.25rem;">
-            <div style="display:flex; align-items:center; gap:0.75rem;">
-              <label for="staff-dept-select" style="font-weight:700; font-size:0.88rem; color:var(--text-muted);">Department:</label>
-              <select id="staff-dept-select" class="form-control" style="width:auto; font-weight:700;"></select>
-            </div>
-            <div style="display:flex; gap:0.75rem;">
-              <button class="btn btn-secondary" onclick="BaariStaff.openWalkinModal()" data-i18n="btn_issue_walkin">
-                ➕ Issue Walk-in Token
-              </button>
-              <button class="btn btn-primary btn-large" onclick="BaariStaff.callNext()" data-i18n="btn_call_next">
-                📢 Call Next Patient
-              </button>
-            </div>
-          </div>
-
-          <div id="staff-capacity-alert" class="capacity-alert" style="display:none;">
-            <div>
-              <strong style="color:#fbbf24;">⚠️ High Queue Congestion:</strong>
-              <span id="staff-capacity-msg" style="margin-left:0.5rem; font-size:0.85rem;"></span>
-            </div>
-          </div>
-
-          <div class="staff-stats-grid">
-            <div class="stat-card">
-              <span class="stat-label" data-i18n="active_doctors">Active Doctors</span>
-              <span class="stat-value" id="staff-stat-active-docs">0</span>
-            </div>
-            <div class="stat-card">
-              <span class="stat-label" data-i18n="waiting_patients">Waiting</span>
-              <span class="stat-value" id="staff-stat-waiting" style="color:var(--color-primary-light,#818cf8);">0</span>
-            </div>
-            <div class="stat-card">
-              <span class="stat-label" data-i18n="called_patients">In Cabin</span>
-              <span class="stat-value" id="staff-stat-called" style="color:#34d399;">0</span>
-            </div>
-            <div class="stat-card">
-              <span class="stat-label" data-i18n="done_today">Done Today</span>
-              <span class="stat-value" id="staff-stat-done">0</span>
-            </div>
-            <div class="stat-card">
-              <span class="stat-label" data-i18n="avg_service">Avg Service</span>
-              <span class="stat-value" id="staff-stat-avg-service">8.0 min</span>
-            </div>
-          </div>
-
-          <div style="display:grid; grid-template-columns: 1fr; gap:1.5rem;">
-            <div class="card">
-              <div class="card-header">
-                <h3 class="card-title">📋 Live Queue Board</h3>
-                <button class="btn btn-secondary" style="padding:0.35rem 0.8rem; font-size:0.8rem;" onclick="BaariStaff.refreshQueue()">
-                  ↻ Refresh
-                </button>
-              </div>
-              <div class="table-responsive">
-                <table class="data-table">
-                  <thead>
-                    <tr>
-                      <th>Token</th>
-                      <th>Patient</th>
-                      <th>Priority</th>
-                      <th>Status</th>
-                      <th>Location</th>
-                      <th>Wait Est.</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody id="staff-queue-tbody"></tbody>
-                </table>
-              </div>
-            </div>
-
-            <div class="card">
-              <div class="card-header">
-                <h3 class="card-title">🩺 Doctor Counters</h3>
-              </div>
-              <div id="staff-doctors-roster"></div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- ==================================================================
-           VIEW 3: WAITING HALL TV DISPLAY BOARD
-           ================================================================== -->
-      <section id="view-display" class="view-section">
-        <div class="view-back-bar" style="margin-bottom:1rem;">
-          <button class="btn btn-secondary" style="font-size:0.82rem; padding:0.35rem 0.9rem;" onclick="BaariApp.navigateTo('patient')" aria-label="Back to Home">&larr; Home</button>
-        </div>
-        <div class="card" style="margin-bottom:1.5rem;">
-          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem; border-bottom:1px solid var(--border-subtle); padding-bottom:1rem; margin-bottom:1.5rem;">
-            <div style="display:flex; align-items:center; gap:0.75rem;">
-              <span style="font-size:2rem;">📺</span>
-              <div>
-                <h2 style="font-size:1.4rem; font-weight:900; margin:0; color:var(--text-main);">OPD Waiting Hall TV Display</h2>
-                <div style="color:var(--text-muted); font-size:0.85rem;">Live Queue Announcement & Calling Screen</div>
-              </div>
-            </div>
-            <div style="display:flex; align-items:center; gap:0.75rem;">
-              <button class="btn btn-success" id="display-voice-toggle" onclick="BaariDisplay.toggleVoice()">
-                🔊 Voice Announcements: ON
-              </button>
-              <button class="btn btn-secondary" onclick="BaariDisplay.render()">
-                ↻ Refresh Board
-              </button>
-            </div>
-          </div>
-
-          <div id="display-board-content">
-            <h3 style="font-size:1.15rem; font-weight:800; color:var(--color-primary-light,#818cf8); margin-bottom:1rem; letter-spacing:0.5px;">
-              ⚡ CURRENTLY BEING CALLED
-            </h3>
-            <div id="display-now-serving-grid" class="display-now-serving-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:1.25rem; margin-bottom:2rem;"></div>
-
-            <h3 style="font-size:1.15rem; font-weight:800; color:var(--text-muted); margin-bottom:1rem; letter-spacing:0.5px;">
-              ⏳ UP NEXT IN QUEUE
-            </h3>
-            <div class="table-responsive">
-              <table class="data-table">
-                <thead>
-                  <tr>
-                    <th>#</th>
-                    <th>Token Number</th>
-                    <th>Patient Name</th>
-                    <th>Department</th>
-                    <th>Estimated Wait</th>
-                  </tr>
-                </thead>
-                <tbody id="display-upnext-tbody"></tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- ==================================================================
-           VIEW 4: HOSPITAL QR POSTER HUB
-           ================================================================== -->
-      <section id="view-qrhub" class="view-section">
-        <div class="view-back-bar" style="margin-bottom:1rem;">
-          <button class="btn btn-secondary" style="font-size:0.82rem; padding:0.35rem 0.9rem;" onclick="BaariApp.navigateTo('patient')" aria-label="Back to Home">&larr; Home</button>
-        </div>
-        <div class="card" style="margin-bottom:1.5rem;">
-          <div class="card-header">
-            <div>
-              <h2 class="card-title">🖨️ Hospital QR Code & Poster Generator</h2>
-              <p style="color:var(--text-muted); font-size:0.85rem; margin-top:0.25rem;">
-                Generate official OPD registration QR posters for hospital counters and waiting areas.
-              </p>
-            </div>
-          </div>
-
-          <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap:2rem; margin-top:1rem;">
-            <!-- Configuration Column -->
-            <div>
-              <div class="form-group">
-                <label class="form-label" for="qrhub-hosp-name">Hospital Name</label>
-                <input class="form-control" type="text" id="qrhub-hosp-name" value="District Civil Hospital (Main OPD)" oninput="BaariQRHub.generateQR()">
-              </div>
-              <div class="form-group">
-                <label class="form-label" for="qrhub-hosp-code">Hospital Facility Code</label>
-                <input class="form-control" type="text" id="qrhub-hosp-code" value="BAARI-GH-PUNE-01" oninput="BaariQRHub.generateQR()">
-              </div>
-              <div class="form-group">
-                <label class="form-label" for="qrhub-dept-select">Department Routing</label>
-                <select class="form-control" id="qrhub-dept-select" onchange="BaariQRHub.generateQR()"></select>
-              </div>
-
-              <div style="background:var(--bg-glass); padding:1rem; border-radius:var(--radius-lg); border:1px solid var(--border-subtle); margin:1.25rem 0;">
-                <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); margin-bottom:0.35rem;">ENCODED DIRECT REGISTRATION URL:</div>
-                <div id="qrhub-target-url-display" style="font-family:var(--font-mono); font-size:0.78rem; color:var(--color-primary-light); word-break:break-all;"></div>
-              </div>
-
-              <div style="display:flex; flex-direction:column; gap:0.6rem;">
-                <button class="btn btn-primary btn-large" onclick="BaariQRHub.printPoster()">
-                  🖨️ Print Official A4 Poster
-                </button>
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.5rem;">
-                  <button class="btn btn-secondary" onclick="BaariQRHub.downloadQRImage()">
-                    📥 Download PNG
-                  </button>
-                  <button class="btn btn-secondary" onclick="BaariQRHub.copyUrl()">
-                    📋 Copy Scan Link
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <!-- Poster Preview Column -->
-            <div style="text-align:center;">
-              <div class="poster-preview-card" style="background:#ffffff; color:#0f172a; padding:2rem; border-radius:16px; border:4px double #0284c7; box-shadow:0 15px 35px rgba(0,0,0,0.3); display:inline-block; max-width:380px; width:100%;">
-                <div style="font-size:0.7rem; font-weight:800; color:#0284c7; letter-spacing:1px; text-transform:uppercase;">Public Health Department</div>
-                <h3 id="qrhub-prev-hosp" style="font-size:1.35rem; font-weight:900; margin:0.3rem 0; color:#0f172a;">District Civil Hospital</h3>
-                <div id="qrhub-prev-code" style="font-size:0.8rem; color:#64748b; margin-bottom:1.25rem;">Code: BAARI-GH-PUNE-01</div>
-
-                <div id="qrhub-qr-canvas-box" style="margin:0 auto; display:flex; justify-content:center;"></div>
-
-                <div style="font-size:1.05rem; font-weight:800; color:#0284c7; margin-top:1.25rem;">
-                  📱 स्कैन करें और अपनी बारी पाएं
-                </div>
-                <div style="font-size:0.78rem; color:#64748b; margin-top:0.25rem;">
-                  Scan QR with your phone camera
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- ==================================================================
-           VIEW 5: SIMULATION
-           ================================================================== -->
-      <section id="view-simulation" class="view-section">
-        <div class="view-back-bar" style="margin-bottom:1rem;">
-          <button class="btn btn-secondary" style="font-size:0.82rem; padding:0.35rem 0.9rem;" onclick="BaariApp.navigateTo('patient')" aria-label="Back to Home">&larr; Home</button>
-        </div>
-        <div class="card" style="margin-bottom:1.5rem;">
-          <div class="card-header">
-            <div>
-              <h2 class="card-title" data-i18n="sim_heading">📊 OPD Crowd & Wait Simulator</h2>
-              <p style="color:var(--text-muted); font-size:0.85rem; margin-top:0.25rem;" data-i18n="sim_sub">
-                Compare 4 AM rush vs. Baari's staggered arrival model.
-              </p>
-            </div>
-          </div>
-
-          <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:1.25rem; background:var(--bg-glass); padding:1.25rem; border-radius:var(--radius-lg); border:1px solid var(--border-subtle); margin-bottom:1.5rem;">
-            <div>
-              <label class="form-label" for="sim-patients">
-                <span data-i18n="sim_param_patients">Patients / Day</span>: <strong id="sim-patients-val" style="color:var(--color-primary-light);">100</strong>
-              </label>
-              <input type="range" id="sim-patients" min="20" max="300" step="10" value="100">
-            </div>
-            <div>
-              <label class="form-label" for="sim-doctors">
-                <span data-i18n="sim_param_doctors">Doctor Counters</span>: <strong id="sim-doctors-val" style="color:var(--color-primary-light);">3</strong>
-              </label>
-              <input type="range" id="sim-doctors" min="1" max="8" step="1" value="3">
-            </div>
-            <div>
-              <label class="form-label" for="sim-adherence">
-                <span data-i18n="sim_param_adherence">Baari Adherence</span>: <strong id="sim-adherence-val" style="color:var(--color-primary-light);">75%</strong>
-              </label>
-              <input type="range" id="sim-adherence" min="0.1" max="1.0" step="0.05" value="0.75">
-            </div>
-            <div style="display:flex; align-items:flex-end;">
-              <button class="btn btn-primary" id="sim-run-btn" style="width:100%; padding:0.75rem;" onclick="BaariSimulation.run()" data-i18n="sim_btn_run">
-                ▶ Run Simulation
-              </button>
-            </div>
-          </div>
-
-          <div class="staff-stats-grid">
-            <div class="stat-card" style="border-left: 3px solid var(--color-success);">
-              <span class="stat-label" data-i18n="sim_metric_wait_red">Wait Reduction</span>
-              <span class="stat-value" id="sim-val-wait-red" style="color:#34d399;">—</span>
-              <small style="color:var(--text-muted); font-size:0.72rem; margin-top:0.25rem;" id="sim-val-wait-detail"></small>
-            </div>
-            <div class="stat-card" style="border-left: 3px solid var(--color-info);">
-              <span class="stat-label" data-i18n="sim_metric_crowd_red">Peak Crowd Cut</span>
-              <span class="stat-value" id="sim-val-crowd-red" style="color:#22d3ee;">—</span>
-              <small style="color:var(--text-muted); font-size:0.72rem; margin-top:0.25rem;" id="sim-val-crowd-detail"></small>
-            </div>
-            <div class="stat-card" style="border-left: 3px solid var(--color-warning);">
-              <span class="stat-label" data-i18n="sim_metric_hours_saved">Hours Saved</span>
-              <span class="stat-value" id="sim-val-hours-saved" style="color:#fbbf24;">—</span>
-              <small style="color:var(--text-muted); font-size:0.72rem; margin-top:0.25rem;" id="sim-val-hours-detail"></small>
-            </div>
-          </div>
-
-          <div style="height:380px; position:relative; margin-top:1.5rem;">
-            <canvas id="sim-chart"></canvas>
-          </div>
-        </div>
-      </section>
-
-      <!-- ==================================================================
-           VIEW 6: ADMIN CONTROL CENTER
-           ================================================================== -->
-      <section id="view-admin" class="view-section">
-        <div class="view-back-bar" style="margin-bottom:1rem;">
-          <button class="btn btn-secondary" style="font-size:0.82rem; padding:0.35rem 0.9rem;" onclick="BaariApp.navigateTo('patient')" aria-label="Back to Home">&#8592; Home</button>
-        </div>
-        <div id="admin-access-warning" class="card" style="text-align:center; padding:3rem; display:none;">
-          <div class="empty-state-icon">🔒</div>
-          <h3 style="margin-bottom:0.75rem;">Administrator Privileges Required</h3>
-          <p style="color:var(--text-muted); margin-bottom:1.5rem;">
-            Please log in with the hospital administrator account.
+        <div class="feature-card">
+          <div class="feature-icon">⚡</div>
+          <h3 class="headline" style="margin:0">3-Tier Urgency Priority</h3>
+          <p class="muted" style="margin:0;font-size:14px">
+            Fair and transparent queue logic: <strong>Emergency Cases (Level 1)</strong> get immediate priority, <strong>Daily Life Problems (Level 2)</strong> are seen ahead of routine, and <strong>Routine Checkups (Level 3)</strong> follow sequential turns.
           </p>
-          <button class="btn btn-primary" onclick="BaariApp.openLoginModal('admin', 'BaariAdmin@2024')">
-            Log in as Admin
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">📱</div>
+          <h3 class="headline" style="margin:0">Hospital QR Poster & Hotline</h3>
+          <p class="muted" style="margin:0;font-size:14px">
+            Patients scan the hospital entrance QR to join the queue. Every patient receives the direct contact phone number of their hospital coordinator for instant help.
+          </p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🎫</div>
+          <h3 class="headline" style="margin:0">Live token + PIN</h3>
+          <p class="muted" style="margin:0;font-size:14px">
+            Get a token number, secret PIN, and a recommended arrival time so you wait at home instead of the corridor.
+          </p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">👩‍⚕️</div>
+          <h3 class="headline" style="margin:0">Coordinator on call</h3>
+          <p class="muted" style="margin:0;font-size:14px">
+            Each hospital lists a coordinator number on check-in and status screens so patients can reach a person, not a kiosk.
+          </p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🌙</div>
+          <h3 class="headline" style="margin:0">Light and dark ready</h3>
+          <p class="muted" style="margin:0;font-size:14px">
+            Cards, forms, and queue boards follow the selected theme so night duty and bright OPDs stay readable.
+          </p>
+        </div>
+      </div>
+
+      <!-- Hospital Portal Banner -->
+      <div class="portal-banner">
+        <div>
+          <span style="font-size:11px;font-weight:800;color:var(--accent);text-transform:uppercase">For Healthcare Providers</span>
+          <h2 class="title-2" style="margin:4px 0 6px">Are you a Hospital or Clinic Administrator?</h2>
+          <p class="muted" style="margin:0;font-size:14px;max-width:540px">
+            Register your hospital in 60 seconds to manage live OPD queues, generate your hospital scan QR poster, and empower coordinators to triage patients seamlessly.
+          </p>
+        </div>
+        <div>
+          <a href="login.html" class="btn btn-primary btn-lg">Hospital Portal &rarr;</a>
+        </div>
+      </div>
+
+      <div class="card boxed" style="padding:22px;margin-bottom:28px">
+        <div class="spread" style="align-items:flex-end">
+          <div>
+            <span class="caption">Live hospitals</span>
+            <h2 class="title-2" style="margin:4px 0 6px">Choose a clinic to start</h2>
+            <p class="muted" style="margin:0">Hospitals registered on Baari appear here with their coordinator helpline.</p>
+          </div>
+          <a class="btn btn-secondary" href="token.html">Open check-in</a>
+        </div>
+        <div class="hospital-chip-row home-hospitals" id="home-hospital-list" style="margin-top:16px"></div>
+      </div>
+    </section>
+
+    <!-- Step Guide -->
+    <section class="page steps" data-reveal>
+      <h2 class="title-2" data-i18n="home.how">How It Works</h2>
+      <ol>
+        <li class="step">
+          <span class="step-index">1</span>
+          <h3 class="headline">Scan QR or Request Token</h3>
+          <p>Scan the hospital QR code or click 'Get a token'. Speak or type your symptoms for smart AI triage.</p>
+        </li>
+        <li class="step">
+          <span class="step-index">2</span>
+          <h3 class="headline">Receive Priority & Arrival Time</h3>
+          <p>Your case is assigned Priority (Emergency, Daily Life Problem, or Routine) with a comfortable arrive-by time.</p>
+        </li>
+        <li class="step">
+          <span class="step-index">3</span>
+          <h3 class="headline">Live Updates & Coordinator Help</h3>
+          <p>Track your position in line in real time. Call your hospital coordinator directly if you need any assistance.</p>
+        </li>
+      </ol>
+    </section>
+
+    <!-- Check Turn Section -->
+    <section class="page check-turn" id="check" data-reveal>
+      <div class="card card-hero">
+        <h2 class="title-2" data-i18n="home.checkTitle">Check my turn</h2>
+        <p class="muted" data-i18n="home.checkHelp">Enter the token number (e.g. G-01) and the 4-digit PIN.</p>
+        <form class="stack" id="lookup-form" style="margin-top:24px">
+          <div class="field">
+            <div class="field-control">
+              <input class="field-input" id="lookup-token" name="token" autocomplete="off" placeholder=" " required>
+              <label class="field-label" for="lookup-token" data-i18n="home.token">Token number</label>
+            </div>
+          </div>
+          <div class="field">
+            <div class="field-control">
+              <input class="field-input" id="lookup-pin" name="pin" inputmode="numeric" autocomplete="off" placeholder=" " maxlength="6" required>
+              <label class="field-label" for="lookup-pin" data-i18n="home.pin">PIN</label>
+            </div>
+            <p class="field-message" id="lookup-message"></p>
+          </div>
+          <button class="btn btn-primary btn-lg" type="submit" id="lookup-submit">
+            <span class="btn-label" data-i18n="home.checkBtn">See my status</span>
+            <span class="spinner" aria-hidden="true"></span>
           </button>
-        </div>
-
-        <div id="admin-content">
-          <!-- Hospital QR Code Generation -->
-          <div class="card" style="margin-bottom:1.5rem;">
-            <div class="card-header">
-              <h3 class="card-title">📱 Quick Hospital QR Generator</h3>
-            </div>
-            <p style="color:var(--text-muted); font-size:0.88rem; margin-bottom:1.25rem;">
-              Generate and test a QR code for your hospital counter.
-            </p>
-
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1.25rem;">
-              <div>
-                <div class="form-group">
-                  <label class="form-label" for="qr-gen-hospital-name">Hospital Name</label>
-                  <input class="form-control" type="text" id="qr-gen-hospital-name" value="District Government Hospital" placeholder="Your Hospital Name">
-                </div>
-                <div class="form-group">
-                  <label class="form-label" for="qr-gen-code">Unique Code</label>
-                  <input class="form-control" type="text" id="qr-gen-code" value="BAARI-GH-MUM-001" placeholder="e.g. BAARI-GH-MUM-001">
-                </div>
-                <button class="btn btn-primary" onclick="BaariAdmin.generateHospitalQR()">
-                  Generate QR Code
-                </button>
-              </div>
-              <div class="qr-display-container" id="hospital-qr-display">
-                <div style="color:var(--text-dim); font-size:0.85rem;">QR code will appear here</div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Hospital KPIs -->
-          <div class="card" style="margin-bottom:1.5rem;">
-            <div class="card-header">
-              <h3 class="card-title">📊 OPD Summary (Today)</h3>
-              <button class="btn btn-danger" style="padding:0.4rem 0.9rem; font-size:0.8rem;" onclick="BaariAdmin.resetDay()">
-                ⚠️ Reset Queue (Demo)
-              </button>
-            </div>
-            <div class="staff-stats-grid">
-              <div class="stat-card">
-                <span class="stat-label">Patients Served</span>
-                <span class="stat-value" id="adm-stat-served">0</span>
-              </div>
-              <div class="stat-card">
-                <span class="stat-label">Avg Wait</span>
-                <span class="stat-value" id="adm-stat-avg-wait">0m</span>
-              </div>
-              <div class="stat-card">
-                <span class="stat-label">Longest Wait</span>
-                <span class="stat-value" id="adm-stat-longest-wait">0m</span>
-              </div>
-              <div class="stat-card">
-                <span class="stat-label">Peak Hour</span>
-                <span class="stat-value" id="adm-stat-peak" style="font-size:1.3rem;">—</span>
-              </div>
-              <div class="stat-card">
-                <span class="stat-label">No-Shows</span>
-                <span class="stat-value" id="adm-stat-noshow" style="font-size:1.3rem;">0%</span>
-              </div>
-            </div>
-            <div id="adm-dept-breakdown" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap:1rem; margin-top:1rem;"></div>
-          </div>
-
-          <!-- Staff Accounts & Audit -->
-          <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap:1.5rem; margin-bottom:1.5rem;">
-            <div class="card">
-              <div class="card-header">
-                <h3 class="card-title">👥 Staff Accounts</h3>
-                <button class="btn btn-secondary" style="padding:0.35rem 0.75rem; font-size:0.8rem;" onclick="BaariAdmin.openAddUserModal()">
-                  + Add Staff
-                </button>
-              </div>
-              <div class="table-responsive">
-                <table class="data-table">
-                  <thead>
-                    <tr>
-                      <th>Username</th>
-                      <th>Role</th>
-                      <th>Department</th>
-                      <th>Status</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody id="adm-users-tbody"></tbody>
-                </table>
-              </div>
-            </div>
-
-            <div class="card">
-              <div class="card-header">
-                <h3 class="card-title">🛡️ Security Audit Log</h3>
-                <button class="btn btn-secondary" style="padding:0.35rem 0.75rem; font-size:0.8rem;" onclick="BaariAdmin.loadAuditLogs()">
-                  ↻ Refresh
-                </button>
-              </div>
-              <div class="table-responsive" style="max-height:360px; overflow-y:auto;">
-                <table class="data-table">
-                  <thead>
-                    <tr>
-                      <th>Time</th>
-                      <th>Action</th>
-                      <th>Actor</th>
-                      <th>Details</th>
-                    </tr>
-                  </thead>
-                  <tbody id="adm-audit-tbody"></tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-    </main>
-
-    <!-- ── Modals ──────────────────────────────────────────────────────────── -->
-
-    <!-- Login Dialog -->
-    <dialog id="login-modal" aria-labelledby="login-title">
-      <div class="modal-header">
-        <h3 class="modal-title" id="login-title">🔐 Staff / Admin Login</h3>
-        <button class="modal-close-btn" onclick="BaariApp.closeLoginModal()">&times;</button>
+        </form>
       </div>
-      <form onsubmit="BaariApp.handleLogin(event)">
-        <div class="form-group">
-          <label class="form-label" for="login-username">Username</label>
-          <input class="form-control" type="text" id="login-username" required autocomplete="username">
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="login-password">Password</label>
-          <input class="form-control" type="password" id="login-password" required autocomplete="current-password">
-        </div>
-        <div style="display:flex; justify-content:flex-end; gap:0.5rem; margin-top:1.5rem;">
-          <button type="button" class="btn btn-secondary" onclick="BaariApp.closeLoginModal()">Cancel</button>
-          <button type="submit" class="btn btn-primary">Login</button>
-        </div>
-      </form>
-    </dialog>
+    </section>
+  </main>
 
-    <!-- Token Confirmation Dialog -->
-    <dialog id="token-confirm-modal" aria-labelledby="conf-title">
-      <div class="modal-header">
-        <h3 class="modal-title" id="conf-title" data-i18n="token_issued_title">🎉 Your Turn is Confirmed!</h3>
-        <button class="modal-close-btn" onclick="BaariPatient.closeTokenConfirmation()">&times;</button>
-      </div>
-
-      <div class="token-hero-badge">
-        <div style="font-size:0.78rem; font-weight:700; color:var(--text-muted); position:relative; z-index:1;" data-i18n="token_number_label">TOKEN NUMBER</div>
-        <div class="token-big-num" id="conf-token-num">G-01</div>
-        <div style="font-size:1.15rem; font-weight:800; color:var(--text-main); position:relative; z-index:1;" id="conf-patient-name"></div>
-        <div style="font-size:0.85rem; color:var(--text-muted); position:relative; z-index:1;" id="conf-dept-name"></div>
-        <div style="margin-top:1rem; position:relative; z-index:1;">
-          <div style="font-size:0.78rem; font-weight:700; color:#fbbf24;" data-i18n="token_pin_label">SECRET 4-DIGIT PIN:</div>
-          <div class="pin-reveal-box" id="conf-pin">0000</div>
-          <div style="font-size:0.72rem; color:var(--text-muted); margin-top:0.35rem;" data-i18n="token_pin_hint">
-            Write this down or memorize it to check status.
-          </div>
-        </div>
-      </div>
-
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem; margin-bottom:1.5rem;">
-        <div style="background:var(--bg-glass); padding:0.85rem; border-radius:var(--radius-lg); text-align:center; border:1px solid var(--border-subtle);">
-          <div style="font-size:0.75rem; color:var(--text-muted);" data-i18n="token_est_wait">Estimated Wait</div>
-          <div style="font-size:1.25rem; font-weight:900; color:#22d3ee;" id="conf-wait">—</div>
-        </div>
-        <div style="background:var(--bg-glass); padding:0.85rem; border-radius:var(--radius-lg); text-align:center; border:1px solid var(--border-subtle);">
-          <div style="font-size:0.75rem; color:var(--text-muted);" data-i18n="token_arrive_at">Arrive At</div>
-          <div style="font-size:1.25rem; font-weight:900; color:#34d399;" id="conf-arrive">—</div>
-        </div>
-      </div>
-
-      <div style="display:flex; flex-direction:column; gap:0.6rem;">
-        <button class="btn btn-secondary" onclick="BaariPatient.speakTokenDetails()" data-i18n="btn_listen_token">
-          🔊 Read Token & PIN Aloud
-        </button>
-        <button class="btn btn-primary btn-large" onclick="BaariPatient.closeTokenConfirmation()" data-i18n="btn_track_live">
-          📍 Track Live Turn Status
-        </button>
-      </div>
-    </dialog>
-
-    <!-- Walk-in Token Dialog (Staff) -->
-    <dialog id="walkin-modal" aria-labelledby="walkin-title">
-      <div class="modal-header">
-        <h3 class="modal-title" id="walkin-title">➕ Issue Walk-in Token</h3>
-        <button class="modal-close-btn" onclick="BaariStaff.closeWalkinModal()">&times;</button>
-      </div>
-      <form id="walkin-form" onsubmit="BaariStaff.handleWalkinSubmit(event)">
-        <div class="form-group">
-          <label class="form-label" for="walkin-name">Patient Name *</label>
-          <input class="form-control" type="text" id="walkin-name" required>
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="walkin-phone">Phone (Optional)</label>
-          <input class="form-control" type="tel" id="walkin-phone">
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="walkin-priority">Priority</label>
-          <select class="form-control" id="walkin-priority">
-            <option value="normal" selected>Normal Queue</option>
-            <option value="priority">Priority (Elderly, Pregnant)</option>
-            <option value="emergency">Emergency</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="walkin-reason">Reason (Required for Priority/Emergency)</label>
-          <input class="form-control" type="text" id="walkin-reason" placeholder="e.g. 80-year-old with crutches">
-        </div>
-        <div style="display:flex; justify-content:flex-end; gap:0.5rem; margin-top:1.5rem;">
-          <button type="button" class="btn btn-secondary" onclick="BaariStaff.closeWalkinModal()">Cancel</button>
-          <button type="submit" class="btn btn-primary">Issue Token</button>
-        </div>
-      </form>
-    </dialog>
-
-    <!-- Priority Override Dialog (Staff) -->
-    <dialog id="priority-modal" aria-labelledby="priority-title">
-      <div class="modal-header">
-        <h3 class="modal-title" id="priority-title">Update Priority</h3>
-        <button class="modal-close-btn" onclick="BaariStaff.closePriorityModal()">&times;</button>
-      </div>
-      <form onsubmit="BaariStaff.handlePrioritySubmit(event)">
-        <div class="form-group">
-          <label class="form-label" for="priority-select">Priority Class</label>
-          <select class="form-control" id="priority-select">
-            <option value="normal">Normal</option>
-            <option value="priority">Priority</option>
-            <option value="emergency">Emergency</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="priority-reason-input">Reason (Mandatory)</label>
-          <input class="form-control" type="text" id="priority-reason-input" placeholder="Clinical justification">
-        </div>
-        <div style="display:flex; justify-content:flex-end; gap:0.5rem; margin-top:1.5rem;">
-          <button type="button" class="btn btn-secondary" onclick="BaariStaff.closePriorityModal()">Cancel</button>
-          <button type="submit" class="btn btn-primary">Save Priority</button>
-        </div>
-      </form>
-    </dialog>
-
-    <!-- Add Staff User (Admin) -->
-    <dialog id="add-user-modal" aria-labelledby="add-user-title">
-      <div class="modal-header">
-        <h3 class="modal-title" id="add-user-title">👤 Create Staff Account</h3>
-        <button class="modal-close-btn" onclick="BaariAdmin.closeAddUserModal()">&times;</button>
-      </div>
-      <form id="add-user-form" onsubmit="BaariAdmin.handleAddUser(event)">
-        <div class="form-group">
-          <label class="form-label" for="new-username">Username *</label>
-          <input class="form-control" type="text" id="new-username" required pattern="^[a-zA-Z0-9_]+$">
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="new-password">Initial Password (min 8 chars) *</label>
-          <input class="form-control" type="password" id="new-password" required minlength="8">
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="new-role">Role *</label>
-          <select class="form-control" id="new-role">
-            <option value="staff" selected>Staff (Department)</option>
-            <option value="admin">Administrator</option>
-          </select>
-        </div>
-        <div class="form-group" id="new-user-dept-group">
-          <label class="form-label" for="new-user-dept">Department *</label>
-          <select class="form-control" id="new-user-dept"></select>
-        </div>
-        <div style="display:flex; justify-content:flex-end; gap:0.5rem; margin-top:1.5rem;">
-          <button type="button" class="btn btn-secondary" onclick="BaariAdmin.closeAddUserModal()">Cancel</button>
-          <button type="submit" class="btn btn-primary">Create Account</button>
-        </div>
-      </form>
-    </dialog>
-
-    <!-- Toast Container -->
-    <div id="toast-container" aria-live="polite"></div>
-
-  </div>
-
-  <!-- Vendored Libraries & Application Scripts (Fully Local) -->
-  <script src="/static/js/chart.min.js"></script>
-  <script src="/static/js/qrcode.min.js"></script>
-  <script src="/static/js/jsqr.min.js"></script>
-  <script src="/static/js/i18n.js"></script>
-  <script src="/static/js/app.js"></script>
-  <script src="/static/js/patient.js"></script>
-  <script src="/static/js/staff.js"></script>
-  <script src="/static/js/display.js"></script>
-  <script src="/static/js/qrhub.js"></script>
-  <script src="/static/js/simulation.js"></script>
-  <script src="/static/js/admin.js"></script>
+  <footer class="footer">
+    <div class="footer-inner">
+      <span class="footer-brand">
+        <img class="footer-logo" src="assets/logo.png" alt="Baari">
+        <span data-i18n="brand">Baari Healthcare</span>
+      </span>
+      <span data-i18n="footer">Calm, dignified queues for hospitals and patients.</span>
+    </div>
+  </footer>
 </body>
 </html>

@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#fbfbfd">
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#000000">
+  <title>Baari Healthcare · Calm, Intelligent Hospital OPD Queues</title>
+  <link rel="icon" type="image/png" href="assets/favicon.png">
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/motion.css">
+  <link rel="stylesheet" href="css/pages.css">
+  <script type="module" src="js/theme.js"></script>
+  <script type="module" src="js/i18n.js"></script>
+  <script type="module" src="js/motion.js"></script>
+  <script type="module" src="js/ui.js"></script>
+  <script type="module" src="js/index.js"></script>
+  <style>
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 20px;
+      margin: 32px 0;
+    }
+    .feature-card {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg, 18px);
+      padding: 24px;
+      box-shadow: var(--shadow-1);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .feature-icon {
+      font-size: 28px;
+      width: 48px; height: 48px; border-radius: 12px;
+      background: var(--surface-2);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .portal-banner {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg, 20px);
+      padding: 28px;
+      margin: 32px 0;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+    }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#main" data-i18n="skip">Skip to content</a>
+  <div class="offline-banner" id="offline-banner" hidden data-i18n="errors.offline">You’re offline. We’ll keep trying.</div>
+  
+  <header class="nav" data-nav>
+    <div class="nav-inner">
+      <a class="nav-brand" href="index.html">
+        <img class="brand-logo" src="assets/logo.png" alt="Baari" width="44" height="44">
+        <span data-i18n="brand">Baari Healthcare</span>
+      </a>
+      <nav class="nav-links" aria-label="Primary">
+        <a class="nav-link is-active" href="index.html" data-i18n="nav.home">Home</a>
+        <a class="nav-link" href="token.html" data-i18n="nav.getToken">Get a token</a>
+        <a class="nav-link" href="status.html" data-i18n="nav.checkTurn">Check my turn</a>
+      </nav>
+      <div class="nav-actions">
+        <div class="lang-switch" role="group" data-i18n-aria="nav.language">
+          <button type="button" data-lang-btn="en">EN</button>
+          <button type="button" data-lang-btn="hi">हि</button>
+          <button type="button" data-lang-btn="mr">मर</button>
+        </div>
+        <button class="theme-toggle" type="button" data-theme-toggle data-i18n-aria="nav.toggleTheme">
+          <svg class="icon" aria-hidden="true"><use href="assets/icons.svg#sun"></use></svg>
+        </button>
+        <div data-auth-slot></div>
+      </div>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="page home-hero">
+      <div class="hero-chip" style="margin-bottom:16px;display:inline-flex;align-items:center;gap:8px;padding:6px 14px;border-radius:999px;border:1px solid var(--line);color:var(--accent);font-size:13px;font-weight:700">
+        <img class="brand-logo" src="assets/logo.png" alt="" width="22" height="22" style="width:22px;height:22px;padding:1px;border-radius:6px">
+        <span>🏥 Smart AI Healthcare Triage & Queue Platform</span>
+      </div>
+      <h1 class="display" data-enter data-i18n="home.title">Come at your time, not at dawn.</h1>
+      <p data-enter data-i18n="home.subtitle" style="max-width:580px;margin:0 auto 24px">
+        Intelligent hospital OPD check-in with AI symptom triage, 3-tier priority categorization (Emergency, Daily Life Problems, Routine), and direct coordinator phone support.
+      </p>
+      <div class="cluster" style="justify-content:center;gap:14px" data-enter>
+        <a class="btn btn-primary btn-lg" style="min-width:200px" href="token.html">Get Patient Token &rarr;</a>
+        <a class="btn btn-secondary btn-lg" style="min-width:180px" href="login.html">Sign In / Register</a>
+      </div>
+      <div class="home-stats" data-enter>
+        <article class="home-stat">
+          <span class="caption">Queue style</span>
+          <strong>Come at your time</strong>
+          <p class="muted" style="margin:6px 0 0;font-size:13px">PIN-protected tokens replace the 4 AM corridor wait.</p>
+        </article>
+        <article class="home-stat">
+          <span class="caption">Triage</span>
+          <strong>3 urgency levels</strong>
+          <p class="muted" style="margin:6px 0 0;font-size:13px">Emergency, daily-life problems, then routine checkups.</p>
+        </article>
+        <article class="home-stat">
+          <span class="caption">Support</span>
+          <strong>Coordinator on call</strong>
+          <p class="muted" style="margin:6px 0 0;font-size:13px">Every hospital lists a human helpline on the token.</p>
+        </article>
+        <article class="home-stat">
+          <span class="caption">Hospitals live</span>
+          <strong id="home-hospital-count">—</strong>
+          <p class="muted" style="margin:6px 0 0;font-size:13px">Scan a poster QR or pick a clinic from the list.</p>
+        </article>
+      </div>
+      <div class="trust-strip" data-enter>
+        <article class="trust-item">
+          <span class="caption">Languages</span>
+          <strong>EN · हिन्दी · मराठी</strong>
+          <p class="muted" style="margin:6px 0 0;font-size:13px">Speak or type symptoms in the language you use at home.</p>
+        </article>
+        <article class="trust-item">
+          <span class="caption">PIN privacy</span>
+          <strong>Token + 4-digit PIN</strong>
+          <p class="muted" style="margin:6px 0 0;font-size:13px">Status is locked to the number you were given at check-in.</p>
+        </article>
+        <article class="trust-item">
+          <span class="caption">Poster QR</span>
+          <strong>Scan at the gate</strong>
+          <p class="muted" style="margin:6px 0 0;font-size:13px">Hospital QR opens this check-in flow with the clinic already selected.</p>
+        </article>
+        <article class="trust-item">
+          <span class="caption">Night duty</span>
+          <strong>Dark-mode boards</strong>
+          <p class="muted" style="margin:6px 0 0;font-size:13px">Staff and patients keep readable cards after sunset.</p>
+        </article>
+      </div>
+    </section>
+
+    <!-- Key Highlights -->
+    <section class="page" data-reveal style="padding-top:0">
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon">🤖</div>
+          <h3 class="headline" style="margin:0">AI Symptom Triage</h3>
+          <p class="muted" style="margin:0;font-size:14px">
+            Speak or type your complaints in English, Hindi, or Marathi. Our clinical AI extracts your symptoms, identifies emergency signs, and recommends the right OPD counter.
+          </p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">⚡</div>
+          <h3 class="headline" style="margin:0">3-Tier Urgency Priority</h3>
+          <p class="muted" style="margin:0;font-size:14px">
+            Fair and transparent queue logic: <strong>Emergency Cases (Level 1)</strong> get immediate priority, <strong>Daily Life Problems (Level 2)</strong> are seen ahead of routine, and <strong>Routine Checkups (Level 3)</strong> follow sequential turns.
+          </p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">📱</div>
+          <h3 class="headline" style="margin:0">Hospital QR Poster & Hotline</h3>
+          <p class="muted" style="margin:0;font-size:14px">
+            Patients scan the hospital entrance QR to join the queue. Every patient receives the direct contact phone number of their hospital coordinator for instant help.
+          </p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🎫</div>
+          <h3 class="headline" style="margin:0">Live token + PIN</h3>
+          <p class="muted" style="margin:0;font-size:14px">
+            Get a token number, secret PIN, and a recommended arrival time so you wait at home instead of the corridor.
+          </p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">👩‍⚕️</div>
+          <h3 class="headline" style="margin:0">Coordinator on call</h3>
+          <p class="muted" style="margin:0;font-size:14px">
+            Each hospital lists a coordinator number on check-in and status screens so patients can reach a person, not a kiosk.
+          </p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🌙</div>
+          <h3 class="headline" style="margin:0">Light and dark ready</h3>
+          <p class="muted" style="margin:0;font-size:14px">
+            Cards, forms, and queue boards follow the selected theme so night duty and bright OPDs stay readable.
+          </p>
+        </div>
+      </div>
+
+      <!-- Hospital Portal Banner -->
+      <div class="portal-banner">
+        <div>
+          <span style="font-size:11px;font-weight:800;color:var(--accent);text-transform:uppercase">For Healthcare Providers</span>
+          <h2 class="title-2" style="margin:4px 0 6px">Are you a Hospital or Clinic Administrator?</h2>
+          <p class="muted" style="margin:0;font-size:14px;max-width:540px">
+            Register your hospital in 60 seconds to manage live OPD queues, generate your hospital scan QR poster, and empower coordinators to triage patients seamlessly.
+          </p>
+        </div>
+        <div>
+          <a href="login.html" class="btn btn-primary btn-lg">Hospital Portal &rarr;</a>
+        </div>
+      </div>
+
+      <div class="card boxed" style="padding:22px;margin-bottom:28px">
+        <div class="spread" style="align-items:flex-end">
+          <div>
+            <span class="caption">Live hospitals</span>
+            <h2 class="title-2" style="margin:4px 0 6px">Choose a clinic to start</h2>
+            <p class="muted" style="margin:0">Hospitals registered on Baari appear here with their coordinator helpline.</p>
+          </div>
+          <a class="btn btn-secondary" href="token.html">Open check-in</a>
+        </div>
+        <div class="hospital-chip-row home-hospitals" id="home-hospital-list" style="margin-top:16px"></div>
+      </div>
+    </section>
+
+    <!-- Step Guide -->
+    <section class="page steps" data-reveal>
+      <h2 class="title-2" data-i18n="home.how">How It Works</h2>
+      <ol>
+        <li class="step">
+          <span class="step-index">1</span>
+          <h3 class="headline">Scan QR or Request Token</h3>
+          <p>Scan the hospital QR code or click 'Get a token'. Speak or type your symptoms for smart AI triage.</p>
+        </li>
+        <li class="step">
+          <span class="step-index">2</span>
+          <h3 class="headline">Receive Priority & Arrival Time</h3>
+          <p>Your case is assigned Priority (Emergency, Daily Life Problem, or Routine) with a comfortable arrive-by time.</p>
+        </li>
+        <li class="step">
+          <span class="step-index">3</span>
+          <h3 class="headline">Live Updates & Coordinator Help</h3>
+          <p>Track your position in line in real time. Call your hospital coordinator directly if you need any assistance.</p>
+        </li>
+      </ol>
+    </section>
+
+    <!-- Check Turn Section -->
+    <section class="page check-turn" id="check" data-reveal>
+      <div class="card card-hero">
+        <h2 class="title-2" data-i18n="home.checkTitle">Check my turn</h2>
+        <p class="muted" data-i18n="home.checkHelp">Enter the token number (e.g. G-01) and the 4-digit PIN.</p>
+        <form class="stack" id="lookup-form" style="margin-top:24px">
+          <div class="field">
+            <div class="field-control">
+              <input class="field-input" id="lookup-token" name="token" autocomplete="off" placeholder=" " required>
+              <label class="field-label" for="lookup-token" data-i18n="home.token">Token number</label>
+            </div>
+          </div>
+          <div class="field">
+            <div class="field-control">
+              <input class="field-input" id="lookup-pin" name="pin" inputmode="numeric" autocomplete="off" placeholder=" " maxlength="6" required>
+              <label class="field-label" for="lookup-pin" data-i18n="home.pin">PIN</label>
+            </div>
+            <p class="field-message" id="lookup-message"></p>
+          </div>
+          <button class="btn btn-primary btn-lg" type="submit" id="lookup-submit">
+            <span class="btn-label" data-i18n="home.checkBtn">See my status</span>
+            <span class="spinner" aria-hidden="true"></span>
+          </button>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+      <span class="footer-brand">
+        <img class="footer-logo" src="assets/logo.png" alt="Baari">
+        <span data-i18n="brand">Baari Healthcare</span>
+      </span>
+      <span data-i18n="footer">Calm, dignified queues for hospitals and patients.</span>
+    </div>
+  </footer>
+</body>
+</html>

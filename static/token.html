@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#fbfbfd">
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0a0a0c">
+  <title>Get a Token · Baari</title>
+  <link rel="icon" type="image/png" href="assets/favicon.png">
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/motion.css">
+  <link rel="stylesheet" href="css/pages.css">
+  <script src="assets/vendor/jsqr.min.js"></script>
+  <script type="module" src="js/theme.js"></script>
+  <script type="module" src="js/i18n.js"></script>
+  <script type="module" src="js/motion.js"></script>
+  <script type="module" src="js/ui.js"></script>
+  <script type="module" src="js/token.js"></script>
+  <style>
+    /* Enhanced token page specific styles */
+    .h-info { display: flex; align-items: center; gap: 12px; }
+    .h-icon {
+      width: 42px; height: 42px; border-radius: 12px;
+      background: var(--accent); color: var(--on-accent);
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .h-meta h3 { margin: 0; font-size: 16px; font-weight: 700; color: var(--text); }
+    .h-meta p { margin: 2px 0 0; font-size: 13px; color: var(--text-2); }
+    .coord-call-btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 8px 14px; border-radius: 999px;
+      background: var(--success); color: #fff; text-decoration: none;
+      font-size: 13px; font-weight: 600;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+      box-shadow: 0 2px 8px color-mix(in srgb, var(--success) 40%, transparent);
+    }
+    .coord-call-btn:hover { transform: scale(1.03); color: #fff; box-shadow: 0 4px 16px color-mix(in srgb, var(--success) 50%, transparent); }
+    .ai-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 70%, var(--success)));
+      color: var(--on-accent); font-size: 11px; font-weight: 700;
+      padding: 4px 12px; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.5px;
+      box-shadow: 0 2px 8px color-mix(in srgb, var(--accent) 35%, transparent);
+    }
+    .ai-input-wrap { display: flex; gap: 8px; margin-top: 10px; align-items: center; flex-wrap: wrap; }
+    .priority-grid { display: grid; grid-template-columns: 1fr; gap: 12px; margin: 16px 0; }
+    @media (min-width: 640px) { .priority-grid { grid-template-columns: repeat(3, 1fr); } }
+    .tier-icon { font-size: 28px; margin-bottom: 6px; }
+    .tier-title { font-size: 15px; font-weight: 700; color: var(--text); }
+    .tier-desc { font-size: 12px; color: var(--text-2); line-height: 1.4; }
+    .tier-tag {
+      align-self: flex-start; font-size: 10px; font-weight: 700; text-transform: uppercase;
+      padding: 3px 8px; border-radius: 5px; margin-top: auto; background: var(--surface-2); color: var(--text-2);
+    }
+    .tier-emergency .tier-tag { background: color-mix(in srgb, var(--danger) 18%, var(--surface)); color: var(--danger); }
+    .tier-daily .tier-tag { background: color-mix(in srgb, var(--warning) 18%, var(--surface)); color: var(--warning); }
+    .tier-routine .tier-tag { background: color-mix(in srgb, var(--accent) 16%, var(--surface)); color: var(--accent); }
+
+    /* Animated step progress pill */
+    .step-pill {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 5px 14px; border-radius: 999px;
+      background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+      border: 1px solid color-mix(in srgb, var(--accent) 25%, var(--line));
+      font-size: 12px; font-weight: 700; color: var(--accent);
+      text-transform: uppercase; letter-spacing: 0.5px;
+    }
+
+    /* Animated hero entrance */
+    @keyframes hero-entrance {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .token-hero { animation: hero-entrance 0.6s cubic-bezier(0.16, 1, 0.3, 1) both; }
+    .token-live-strip { animation: hero-entrance 0.6s 0.1s cubic-bezier(0.16, 1, 0.3, 1) both; }
+    .qr-scan-card { animation: hero-entrance 0.6s 0.15s cubic-bezier(0.16, 1, 0.3, 1) both; }
+    .hospital-banner { animation: hero-entrance 0.6s 0.2s cubic-bezier(0.16, 1, 0.3, 1) both; }
+    .ai-triage-card { animation: hero-entrance 0.6s 0.25s cubic-bezier(0.16, 1, 0.3, 1) both; }
+    .wizard { animation: hero-entrance 0.6s 0.3s cubic-bezier(0.16, 1, 0.3, 1) both; }
+
+    /* Animated triage pulse ring on mic button */
+    .mic-ring {
+      position: absolute; inset: -4px; border-radius: 50%;
+      border: 2px solid var(--accent); opacity: 0;
+    }
+    .mic-btn.is-listening .mic-ring {
+      animation: listen-ring 1.4s ease-in-out infinite;
+    }
+    @keyframes listen-ring {
+      0% { transform: scale(0.9); opacity: 0.8; }
+      100% { transform: scale(1.4); opacity: 0; }
+    }
+
+    /* Token number success explosion animation */
+    @keyframes number-pop {
+      0% { transform: scale(0.5) rotate(-5deg); opacity: 0; }
+      60% { transform: scale(1.1) rotate(1deg); opacity: 1; }
+      80% { transform: scale(0.96) rotate(-0.5deg); }
+      100% { transform: scale(1) rotate(0); opacity: 1; }
+    }
+    .token-success .token-number {
+      animation: number-pop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 0.1s both;
+    }
+
+    /* Glowing ticket card */
+    .token-success .wizard-step {
+      background: linear-gradient(135deg,
+        color-mix(in srgb, var(--accent) 8%, var(--surface)),
+        color-mix(in srgb, var(--success) 5%, var(--surface))
+      ) !important;
+      border-color: color-mix(in srgb, var(--accent) 30%, var(--line)) !important;
+    }
+
+    /* Stats strip on hero */
+    .hero-stats-strip {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 8px;
+      margin-top: 14px;
+    }
+    .hero-stat-box {
+      padding: 12px;
+      border-radius: 14px;
+      background: color-mix(in srgb, var(--surface) 80%, transparent);
+      border: 1px solid color-mix(in srgb, var(--line) 60%, transparent);
+      text-align: center;
+    }
+    .hero-stat-box strong {
+      display: block;
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: -0.03em;
+    }
+    .hero-stat-box span {
+      font-size: 11px;
+      color: var(--text-2);
+    }
+
+    /* Animated counter glow */
+    #live-hospital-count {
+      background: linear-gradient(135deg, var(--accent), var(--success));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* Progress bar at top of wizard */
+    .wizard-progress span {
+      transition: background-color 0.4s ease, flex 0.3s ease;
+    }
+    .wizard-progress span.is-on {
+      background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 70%, var(--success)));
+    }
+
+    /* QR scan section enhanced */
+    .qr-scan-card {
+      background: linear-gradient(135deg,
+        color-mix(in srgb, var(--accent) 5%, var(--surface)),
+        var(--surface)
+      ) !important;
+    }
+
+    /* Confirmation readback */
+    .confirm-readback > div {
+      display: grid;
+      grid-template-columns: 140px 1fr;
+      align-items: baseline;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--line);
+    }
+    .confirm-readback > div:last-child { border-bottom: none; }
+
+    /* Issued token card glow */
+    .arrive-hero {
+      position: relative;
+      overflow: hidden;
+    }
+    .arrive-hero::before {
+      content: "";
+      position: absolute; inset: 0;
+      background: radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--success) 20%, transparent), transparent 70%);
+      pointer-events: none;
+    }
+
+    /* Department cards enhanced */
+    .dept-card {
+      transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+    .dept-card:hover {
+      border-color: var(--accent);
+      box-shadow: 0 4px 16px color-mix(in srgb, var(--accent) 20%, transparent);
+    }
+
+    /* Hospital chip row */
+    .hospital-chip {
+      transition: all 0.2s ease;
+    }
+    .hospital-chip:hover {
+      border-color: var(--accent);
+      transform: translateY(-2px);
+    }
+  </style>
+</head>
+<body class="token-page">
+  <a class="skip-link" href="#main" data-i18n="skip">Skip to content</a>
+  <div class="offline-banner" id="offline-banner" hidden data-i18n="errors.offline">You're offline. We'll keep trying.</div>
+  
+  <header class="nav" data-nav>
+    <div class="nav-inner">
+      <a class="nav-brand" href="index.html">
+        <img class="brand-logo" src="assets/logo.png" alt="Baari" width="44" height="44">
+        <span data-i18n="brand">Baari Healthcare</span>
+      </a>
+      <nav class="nav-links" aria-label="Primary">
+        <a class="nav-link" href="index.html" data-i18n="nav.home">Home</a>
+        <a class="nav-link is-active" href="token.html" data-i18n="nav.getToken">Get a token</a>
+        <a class="nav-link" href="status.html" data-i18n="nav.checkTurn">Check my turn</a>
+      </nav>
+      <div class="nav-actions">
+        <div class="lang-switch" role="group" data-i18n-aria="nav.language">
+          <button type="button" data-lang-btn="en">EN</button>
+          <button type="button" data-lang-btn="hi">हि</button>
+          <button type="button" data-lang-btn="mr">मर</button>
+        </div>
+        <button class="theme-toggle" type="button" data-theme-toggle data-i18n-aria="nav.toggleTheme">
+          <svg class="icon" aria-hidden="true"><use href="assets/icons.svg#sun"></use></svg>
+        </button>
+        <div data-auth-slot></div>
+      </div>
+    </div>
+  </header>
+
+  <main id="main" class="page" style="max-width: 880px; margin: 0 auto; padding: 28px 16px 64px;">
+
+    <!-- Hero Section: Animated & Stuffed -->
+    <section class="token-hero token-float">
+      <div class="token-hero-orbs" aria-hidden="true"><span></span><span></span></div>
+      <div class="token-hero-copy">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:4px">
+          <span class="badge badge-primary token-pulse" style="font-size:12px">🟢 Live OPD Check-in</span>
+          <span class="badge" style="font-size:11px;background:color-mix(in srgb,var(--success) 14%,var(--surface));color:var(--success)">AI Powered</span>
+        </div>
+        <h1 class="title-1" style="margin:0;line-height:1.1">Get a token — skip the<br>corridor wait</h1>
+        <p class="muted" style="margin:6px 0 0;max-width:52ch;font-size:15px">Scan the hospital QR, let AI sort urgency, and walk in at your window. Coordinator number on every ticket.</p>
+        <div class="cluster" style="gap:8px;margin-top:10px;flex-wrap:wrap">
+          <span class="chip" style="background:color-mix(in srgb,var(--accent) 10%,var(--surface));color:var(--accent)">📷 QR poster</span>
+          <span class="chip" style="background:color-mix(in srgb,var(--success) 10%,var(--surface));color:var(--success)">🤖 AI triage</span>
+          <span class="chip">🔐 PIN locked</span>
+          <span class="chip">📞 Coordinator call</span>
+          <span class="chip">3 urgency levels</span>
+        </div>
+        <!-- Mini stats in hero -->
+        <div class="hero-stats-strip">
+          <div class="hero-stat-box">
+            <strong id="live-hospital-count">—</strong>
+            <span>Hospitals</span>
+          </div>
+          <div class="hero-stat-box">
+            <strong>3</strong>
+            <span>Priority tiers</span>
+          </div>
+          <div class="hero-stat-box">
+            <strong>4-PIN</strong>
+            <span>Secured token</span>
+          </div>
+          <div class="hero-stat-box">
+            <strong>0 queue</strong>
+            <span>Wait at home</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Live info pills -->
+    <div class="token-live-strip">
+      <div class="info-pill">
+        <strong>Step 1 — Identify</strong>
+        <span>Name, phone, hospital from QR or list.</span>
+      </div>
+      <div class="info-pill">
+        <strong>Step 2 — AI triage</strong>
+        <span>Speak or type symptoms. Urgency assigned live.</span>
+      </div>
+      <div class="info-pill">
+        <strong>Step 3 — Token + PIN</strong>
+        <span>Arrive at your window. Call coordinator anytime.</span>
+      </div>
+      <div class="info-pill">
+        <strong>Arrive-by time</strong>
+        <span>Wait at home, not the hall.</span>
+      </div>
+    </div>
+
+    <!-- Hospital chips -->
+    <div class="hospital-chip-row" id="hospital-chip-row"></div>
+
+    <!-- QR Scan Card -->
+    <div class="qr-scan-card" id="qr-scan-card">
+      <div class="spread" style="align-items:center;flex-wrap:wrap;gap:12px">
+        <div>
+          <h2 class="headline" style="margin:0;font-size:16px">📷 Scan hospital QR code</h2>
+          <p class="caption" style="margin:4px 0 0">Point camera at the entrance poster, or upload a photo.</p>
+        </div>
+        <div class="qr-scan-actions">
+          <button class="btn btn-primary" type="button" id="btn-scan-qr">
+            📷 Start camera
+          </button>
+          <button class="btn btn-secondary" type="button" id="btn-stop-scan" hidden>Stop</button>
+          <label class="btn btn-secondary" for="qr-file-input">Upload image</label>
+          <input id="qr-file-input" type="file" accept="image/*" capture="environment" hidden>
+        </div>
+      </div>
+      <p class="caption" id="qr-scan-status" style="color:var(--text-3)">Camera stays on this device. Nothing uploaded except the hospital id from the code.</p>
+      <div class="qr-video-wrap" id="qr-video-wrap" hidden>
+        <video id="qr-video" autoplay playsinline muted></video>
+        <canvas id="qr-canvas"></canvas>
+        <div class="qr-frame" aria-hidden="true"></div>
+      </div>
+    </div>
+
+    <!-- Hospital & Coordinator Banner -->
+    <div class="hospital-banner" id="hospital-banner">
+      <div class="h-info" style="flex:1">
+        <div class="h-icon">
+          <svg class="icon" aria-hidden="true" style="width:22px;height:22px"><use href="assets/icons.svg#stethoscope"></use></svg>
+        </div>
+        <div class="h-meta" style="flex:1">
+          <div class="cluster" style="gap:8px;align-items:center;margin-bottom:6px;flex-wrap:wrap">
+            <span class="badge badge-primary" style="font-size:11px;text-transform:uppercase">Healthcare Center</span>
+            <div class="select-wrap" style="width:auto;display:inline-block">
+              <select id="hospital-select" class="select" style="height:32px;font-size:13px;padding:0 30px 0 10px;width:auto">
+                <option value="1">Baari City Care Hospital</option>
+              </select>
+              <svg class="icon select-arrow" aria-hidden="true" style="width:14px;height:14px;right:8px"><use href="assets/icons.svg#chevron-down"></use></svg>
+            </div>
+          </div>
+          <h3 id="banner-h-name" style="margin:2px 0 0">Baari City Care Hospital</h3>
+          <p id="banner-h-loc" style="margin:2px 0 0">Central Medical Campus • OPD Facility</p>
+        </div>
+      </div>
+      <div>
+        <a href="tel:+919823045678" class="coord-call-btn" id="banner-coord-link">
+          <svg class="icon" aria-hidden="true" style="width:14px;height:14px;fill:currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+          <span>Coordinator: <strong id="banner-coord-phone">+91 98230 45678</strong></span>
+        </a>
+      </div>
+    </div>
+
+    <!-- AI Voice & Natural Language Assistant -->
+    <div class="ai-triage-card" id="ai-assistant-box">
+      <div class="spread" style="align-items:center;flex-wrap:wrap;gap:8px">
+        <span class="ai-badge">
+          <svg class="icon" aria-hidden="true" style="width:12px;height:12px;fill:currentColor"><circle cx="12" cy="12" r="10"/></svg>
+          🤖 Smart AI Triage Assistant
+        </span>
+        <div class="waveform" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span></div>
+        <span class="caption" style="color:var(--text-2)">Speak or Type • EN / हिन्दी / मराठी</span>
+      </div>
+      <p style="font-size:14px;margin:10px 0 12px;color:var(--text-2);line-height:1.5">
+        Tell us your name and problem. Our clinical AI extracts details and recommends the right urgency level and OPD counter automatically.
+      </p>
+      <div class="ai-input-wrap">
+        <input class="ai-input" id="ai-text-input" placeholder="e.g. My name is Priya, having high fever 103 and severe nausea since last night" style="min-height:44px">
+        <button class="mic-btn mic" type="button" id="mic-ai" title="Speak your name and symptoms" style="width:48px;height:48px;flex-shrink:0">
+          <span class="mic-ring"></span>
+          <svg class="icon" aria-hidden="true"><use href="assets/icons.svg#mic"></use></svg>
+        </button>
+        <button class="btn btn-primary" type="button" id="btn-ai-triage" style="white-space:nowrap">
+          <span class="btn-label">AI Triage →</span>
+          <span class="spinner" aria-hidden="true"></span>
+        </button>
+      </div>
+      <div id="ai-result-panel" class="ai-result-pill" hidden>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:18px">🎯</span>
+          <div><strong>AI Recommendation:</strong> <span id="ai-result-text"></span></div>
+        </div>
+        <div style="font-size:12px;opacity:0.85;margin-top:4px" id="ai-result-reason"></div>
+      </div>
+    </div>
+
+    <!-- Page Header -->
+    <header class="page-header" data-enter style="padding: 24px 0 16px;">
+      <div>
+        <div class="step-pill" style="margin-bottom:10px">Patient Check-in & Token</div>
+        <h1 class="title-1" data-i18n="wizard.title" style="margin:0">4-Step Token Request</h1>
+        <p class="muted" style="margin:6px 0 0">AI triage · Priority selection · Live queue tracking</p>
+      </div>
+    </header>
+
+    <!-- Wizard -->
+    <div class="wizard" id="wizard">
+      <div class="wizard-progress" aria-hidden="true">
+        <span data-progress="0" class="is-on"></span>
+        <span data-progress="1"></span>
+        <span data-progress="2"></span>
+        <span data-progress="3"></span>
+      </div>
+
+      <!-- Step 0: Name & Contact -->
+      <section class="wizard-step is-visible" data-step="0">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+          <div class="step-pill">Step 1 of 4</div>
+        </div>
+        <h2 class="title-2" data-i18n="wizard.askName">Patient Identification</h2>
+        <p class="muted">Enter patient's full name and mobile number for queue alerts.</p>
+        <div class="field">
+          <div class="field-control">
+            <input class="field-input" id="patient-name" autocomplete="name" placeholder=" " required>
+            <label class="field-label" for="patient-name" data-i18n="wizard.name">Patient Full Name *</label>
+          </div>
+          <p class="field-message" id="name-message" style="color:var(--danger)"></p>
+        </div>
+        <div class="field" style="margin-top:14px">
+          <div class="field-control">
+            <input class="field-input" id="patient-phone" type="tel" placeholder=" ">
+            <label class="field-label" for="patient-phone">Mobile Phone (Optional)</label>
+          </div>
+        </div>
+        <button class="btn btn-primary btn-lg" type="button" data-next style="margin-top:18px">
+          <span class="btn-label" data-i18n="common.next">Next: Choose Urgency Level →</span>
+        </button>
+      </section>
+
+      <!-- Step 1: 3 Priority Options -->
+      <section class="wizard-step" data-step="1">
+        <div class="step-pill" style="margin-bottom:8px">Step 2 of 4</div>
+        <h2 class="title-2">Urgency Level</h2>
+        <p class="muted">Select the tier that matches the patient's condition:</p>
+        
+        <div class="priority-grid">
+          <div class="priority-card tier-emergency" id="card-emergency" data-priority="emergency" role="radio" aria-checked="false" tabindex="0">
+            <div class="tier-icon">🚨</div>
+            <div class="tier-title">Emergency / Critical</div>
+            <div class="tier-desc">Severe chest pain, breathlessness, heavy bleeding, accident, trauma, stroke or labor pain.</div>
+            <span class="tier-tag">Level 1 — Immediate</span>
+          </div>
+          <div class="priority-card tier-daily is-selected" id="card-daily" data-priority="daily_life" role="radio" aria-checked="true" tabindex="0">
+            <div class="tier-icon">⚡</div>
+            <div class="tier-title">Daily Life Problem</div>
+            <div class="tier-desc">High fever, severe vomiting, intense stomach/body ache, fracture, sprain, acute distress.</div>
+            <span class="tier-tag">Level 2 — Ahead of Routine</span>
+          </div>
+          <div class="priority-card tier-routine" id="card-routine" data-priority="routine" role="radio" aria-checked="false" tabindex="0">
+            <div class="tier-icon">🩺</div>
+            <div class="tier-title">Routine / Checkup</div>
+            <div class="tier-desc">General consultation, follow-up, BP/Sugar check, prescription refill, mild symptoms.</div>
+            <span class="tier-tag">Level 3 — Sequential</span>
+          </div>
+        </div>
+
+        <div class="field" style="margin-top:12px">
+          <div class="field-control">
+            <input class="field-input" id="symptoms-reason" placeholder=" ">
+            <label class="field-label" for="symptoms-reason">Reason or Symptoms Summary</label>
+          </div>
+        </div>
+
+        <div class="spread" style="margin-top:20px">
+          <button class="btn btn-secondary" type="button" data-back data-i18n="common.back">← Back</button>
+          <button class="btn btn-primary" type="button" data-next>Next: Select Department →</button>
+        </div>
+      </section>
+
+      <!-- Step 2: Department Selection -->
+      <section class="wizard-step" data-step="2">
+        <div class="step-pill" style="margin-bottom:8px">Step 3 of 4</div>
+        <h2 class="title-2" data-i18n="wizard.askDept">OPD Department</h2>
+        <p class="muted">Select from common OPD counters or pick from the dropdown:</p>
+
+        <div class="dept-grid" id="dept-cards-grid">
+          <div class="dept-card is-selected" data-dept-id="1" data-dept-code="G">
+            <div class="dept-card-icon">🩺</div>
+            <div class="dept-card-title">General Medicine</div>
+            <div class="dept-card-desc">Fever, infection, BP, primary consultation</div>
+          </div>
+          <div class="dept-card" data-dept-id="2" data-dept-code="O">
+            <div class="dept-card-icon">🦴</div>
+            <div class="dept-card-title">Orthopedics</div>
+            <div class="dept-card-desc">Joints, bones, fractures, sprains, spine</div>
+          </div>
+          <div class="dept-card" data-dept-id="3" data-dept-code="Y">
+            <div class="dept-card-icon">🌸</div>
+            <div class="dept-card-title">Gynecology</div>
+            <div class="dept-card-desc">Women's health, maternity & prenatal care</div>
+          </div>
+          <div class="dept-card" data-dept-id="4" data-dept-code="P">
+            <div class="dept-card-icon">👶</div>
+            <div class="dept-card-title">Pediatrics</div>
+            <div class="dept-card-desc">Infant, children wellness & child care</div>
+          </div>
+        </div>
+
+        <div class="field" style="margin-top:14px">
+          <label style="font-size:13px;font-weight:600;margin-bottom:6px;display:block;color:var(--text-2)" for="department">Or choose from full list:</label>
+          <div class="select-wrap">
+            <select class="select" id="department" name="department" required>
+              <option value="1" data-code="G">General Medicine</option>
+              <option value="2" data-code="O">Orthopedics</option>
+              <option value="3" data-code="Y">Gynecology</option>
+              <option value="4" data-code="P">Pediatrics</option>
+            </select>
+            <svg class="icon select-arrow" aria-hidden="true"><use href="assets/icons.svg#chevron-down"></use></svg>
+          </div>
+        </div>
+        <div class="skeleton" id="dept-skeleton" hidden style="display:none;height:52px"></div>
+
+        <div class="card" style="padding:16px;margin:16px 0;background:color-mix(in srgb,var(--accent) 5%,var(--surface))">
+          <p style="font-size:13px;margin:0">
+            <strong>Need help choosing?</strong> Call the Coordinator at 
+            <a href="tel:+919823045678" style="font-weight:700" id="dept-help-phone">+91 98230 45678</a>
+          </p>
+        </div>
+
+        <div class="spread">
+          <button class="btn btn-secondary" type="button" data-back>← Back</button>
+          <button class="btn btn-primary" type="button" data-next>Next: Review →</button>
+        </div>
+      </section>
+
+      <!-- Step 3: Confirmation -->
+      <section class="wizard-step" data-step="3">
+        <div class="step-pill" style="margin-bottom:8px">Step 4 of 4</div>
+        <h2 class="title-2" data-i18n="wizard.confirmTitle">Confirm Your Details</h2>
+        <p class="muted">Your live queue token will be generated instantly.</p>
+        <dl class="confirm-readback" style="background:var(--surface-2);border-radius:var(--radius-md);padding:8px 16px;margin:16px 0">
+          <div>
+            <dt style="font-size:12px;color:var(--text-3);font-weight:600;text-transform:uppercase;letter-spacing:0.05em">Hospital</dt>
+            <dd id="confirm-hospital" style="margin:0;font-size:15px;font-weight:600">Baari City Care Hospital</dd>
+          </div>
+          <div>
+            <dt style="font-size:12px;color:var(--text-3);font-weight:600;text-transform:uppercase;letter-spacing:0.05em">Patient Name</dt>
+            <dd id="confirm-name" style="margin:0;font-size:15px;font-weight:600"></dd>
+          </div>
+          <div>
+            <dt style="font-size:12px;color:var(--text-3);font-weight:600;text-transform:uppercase;letter-spacing:0.05em">Priority Class</dt>
+            <dd id="confirm-priority" style="margin:0"><span class="badge" id="confirm-priority-badge">Daily Life Problem</span></dd>
+          </div>
+          <div>
+            <dt style="font-size:12px;color:var(--text-3);font-weight:600;text-transform:uppercase;letter-spacing:0.05em">Reason / Symptoms</dt>
+            <dd id="confirm-symptoms" style="margin:0;font-size:15px;font-weight:600">—</dd>
+          </div>
+          <div>
+            <dt style="font-size:12px;color:var(--text-3);font-weight:600;text-transform:uppercase;letter-spacing:0.05em">Department</dt>
+            <dd id="confirm-dept" style="margin:0;font-size:15px;font-weight:600"></dd>
+          </div>
+          <div>
+            <dt style="font-size:12px;color:var(--text-3);font-weight:600;text-transform:uppercase;letter-spacing:0.05em">Coordinator</dt>
+            <dd id="confirm-coord" style="margin:0;font-size:15px;font-weight:600">+91 98230 45678</dd>
+          </div>
+        </dl>
+        <div class="spread" style="margin-top:20px">
+          <button class="btn btn-secondary" type="button" data-back>← Edit</button>
+          <button class="btn btn-primary btn-lg" type="button" id="confirm-yes" style="width:auto;min-width:200px">
+            <span class="btn-label">🎫 Generate Token</span>
+            <span class="spinner" aria-hidden="true"></span>
+          </button>
+        </div>
+      </section>
+
+      <!-- Step 4: Token Issued Success -->
+      <section class="wizard-step token-success" data-step="4">
+        <p class="caption" data-i18n="wizard.success" style="font-size:14px;color:var(--success);font-weight:700;letter-spacing:0.05em;text-transform:uppercase">✅ Your token is ready!</p>
+        <p class="token-number" id="issued-number"></p>
+        <div id="issued-priority-chip" style="margin-bottom:16px"></div>
+
+        <div class="arrive-hero">
+          <span class="caption" data-i18n="wizard.arrive" style="color:var(--success);font-weight:600">🕐 Recommended Arrival</span>
+          <p class="arrive-time" id="arrive-time" style="color:var(--success)"></p>
+          <p class="caption" id="leave-by"></p>
+        </div>
+        <p class="muted" id="wait-range" style="margin-top:8px"></p>
+
+        <!-- Coordinator contact card -->
+        <div class="card" style="padding:16px;margin:16px 0;text-align:left;background:color-mix(in srgb,var(--accent) 6%,var(--surface))">
+          <div class="spread" style="align-items:center">
+            <div>
+              <p style="font-size:11px;font-weight:800;color:var(--accent);margin:0;text-transform:uppercase;letter-spacing:0.06em">Hospital Coordinator On Duty</p>
+              <h4 style="margin:4px 0 2px;font-size:15px;font-weight:700" id="issued-coord-name">Dr. Sunita Deshmukh</h4>
+              <p style="margin:0;font-size:13px;color:var(--text-2)" id="issued-h-loc">Camp Campus, Pune</p>
+            </div>
+            <a href="tel:+919823045678" id="issued-coord-call" class="coord-call-btn">
+              <svg class="icon" aria-hidden="true" style="width:14px;height:14px;fill:currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+              <span>Call Coordinator</span>
+            </a>
+          </div>
+        </div>
+
+        <div class="pin-once">
+          <span style="font-size:22px;letter-spacing:0.15em" id="issued-pin"></span>
+          <button class="btn btn-icon" type="button" id="copy-pin" data-i18n-aria="common.copy" title="Copy PIN">
+            <svg class="icon" aria-hidden="true"><use href="assets/icons.svg#copy"></use></svg>
+          </button>
+        </div>
+        <p class="caption" data-i18n="wizard.pinOnce" style="margin-top:8px">🔐 Secret PIN — use with Token Number to check your status</p>
+        <a class="btn btn-primary btn-lg" id="status-link" href="status.html" style="margin-top:16px" data-i18n="nav.checkTurn">Track My Live Turn →</a>
+      </section>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+      <span class="footer-brand">
+        <img class="footer-logo" src="assets/logo.png" alt="Baari">
+        <span data-i18n="brand">Baari Healthcare</span>
+      </span>
+      <span data-i18n="footer">Calm, dignified queues for hospitals and patients.</span>
+    </div>
+  </footer>
+</body>
+</html>

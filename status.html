@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#fbfbfd">
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#000000">
+  <title>Live Turn Status & Coordinator Helpline · Baari</title>
+  <link rel="icon" type="image/png" href="assets/favicon.png">
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/motion.css">
+  <link rel="stylesheet" href="css/pages.css">
+  <script type="module" src="js/theme.js"></script>
+  <script type="module" src="js/i18n.js"></script>
+  <script type="module" src="js/motion.js"></script>
+  <script type="module" src="js/ui.js"></script>
+  <script type="module" src="js/status.js"></script>
+  <style>
+    .coord-card {
+      background: linear-gradient(135deg, rgba(0,102,204,0.06) 0%, rgba(16,185,129,0.05) 100%);
+      border: 1px solid rgba(0,102,204,0.18);
+      border-radius: var(--radius-lg, 16px);
+      padding: 20px;
+      margin-top: 20px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .call-coord-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 20px;
+      border-radius: 999px;
+      background: #10b981;
+      color: #fff;
+      font-size: 14px;
+      font-weight: 700;
+      text-decoration: none;
+      box-shadow: 0 4px 12px rgba(16,185,129,0.3);
+      transition: all 0.2s ease;
+    }
+    .call-coord-btn:hover {
+      transform: scale(1.04);
+      background: #059669;
+      color: #fff;
+    }
+    .priority-badge-lg {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+    .priority-emergency { background: color-mix(in srgb, var(--danger) 16%, var(--surface)); color: var(--danger); border: 1px solid var(--line); }
+    .priority-daily { background: color-mix(in srgb, var(--warning) 16%, var(--surface)); color: var(--warning); border: 1px solid var(--line); }
+    .priority-routine { background: color-mix(in srgb, var(--accent) 16%, var(--surface)); color: var(--accent); border: 1px solid var(--line); }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#main" data-i18n="skip">Skip to content</a>
+  <div class="offline-banner" id="offline-banner" hidden data-i18n="errors.offline">You’re offline. We’ll keep trying.</div>
+  
+  <header class="nav" data-nav>
+    <div class="nav-inner">
+      <a class="nav-brand" href="index.html">
+        <img class="brand-logo" src="assets/logo.png" alt="Baari" width="44" height="44">
+        <span data-i18n="brand">Baari Healthcare</span>
+      </a>
+      <nav class="nav-links" aria-label="Primary">
+        <a class="nav-link" href="index.html" data-i18n="nav.home">Home</a>
+        <a class="nav-link" href="token.html" data-i18n="nav.getToken">Get a token</a>
+        <a class="nav-link is-active" href="status.html" data-i18n="nav.checkTurn">Check my turn</a>
+      </nav>
+      <div class="nav-actions">
+        <div class="lang-switch" role="group" data-i18n-aria="nav.language">
+          <button type="button" data-lang-btn="en">EN</button>
+          <button type="button" data-lang-btn="hi">हि</button>
+          <button type="button" data-lang-btn="mr">मर</button>
+        </div>
+        <button class="theme-toggle" type="button" data-theme-toggle data-i18n-aria="nav.toggleTheme">
+          <svg class="icon" aria-hidden="true"><use href="assets/icons.svg#sun"></use></svg>
+        </button>
+        <div data-auth-slot></div>
+      </div>
+    </div>
+  </header>
+
+  <main id="main" class="page status-page" style="max-width:760px;margin:0 auto;padding:24px 16px;">
+    <header class="page-header" data-enter>
+      <div>
+        <h1 class="title-1" data-i18n="status.title">Live Turn Status</h1>
+        <p data-i18n="status.desc">Real-time queue tracking & direct coordinator assistance.</p>
+      </div>
+      <span class="status-live" id="live-chip" hidden>
+        <span class="live-dot" aria-hidden="true"></span>
+        <span data-i18n="status.live">Live Queue Updates</span>
+      </span>
+    </header>
+
+    <div id="status-skel" class="stack" hidden>
+      <div class="skeleton" style="height:160px;border-radius:28px"></div>
+      <div class="skeleton" style="height:96px"></div>
+    </div>
+
+    <!-- Lookup Form if no ID provided -->
+    <div id="status-empty" class="card" hidden style="max-width:500px;margin:32px auto;padding:24px;">
+      <h2 class="title-2" style="font-size:18px;margin-bottom:8px">Lookup Token Status</h2>
+      <p class="muted" data-i18n="status.missing">Enter your token number (e.g. G-01) and 4-digit PIN.</p>
+      <form class="stack" id="lookup-form" style="margin-top:20px">
+        <div class="field">
+          <div class="field-control">
+            <input class="field-input" id="lookup-token" name="token" autocomplete="off" placeholder=" " required>
+            <label class="field-label" for="lookup-token" data-i18n="home.token">Token number (e.g. G-01)</label>
+          </div>
+        </div>
+        <div class="field">
+          <div class="field-control">
+            <input class="field-input" id="lookup-pin" name="pin" inputmode="numeric" autocomplete="off" placeholder=" " maxlength="6" required>
+            <label class="field-label" for="lookup-pin" data-i18n="home.pin">4-Digit PIN</label>
+          </div>
+          <p class="field-message" id="lookup-message"></p>
+        </div>
+        <button class="btn btn-primary btn-lg" type="submit" id="lookup-submit">
+          <span class="btn-label" data-i18n="home.checkBtn">See my status</span>
+          <span class="spinner" aria-hidden="true"></span>
+        </button>
+      </form>
+    </div>
+
+    <!-- Live Status View -->
+    <div id="status-view" hidden>
+      <div id="priority-badge-container"></div>
+
+      <div class="arrive-hero card-hero" data-enter style="margin-bottom:20px;">
+        <span class="caption" data-i18n="status.arrive">Recommended Arrival Time</span>
+        <p class="arrive-time" id="arrive-time" style="font-size:36px;font-weight:800;letter-spacing:-1px"></p>
+        <p class="headline" id="token-label" style="font-size:24px;margin-top:4px"></p>
+        <p class="caption" id="department-label" style="opacity:0.9"></p>
+      </div>
+
+      <div class="status-grid" style="grid-template-columns: repeat(2, 1fr); gap: 16px;">
+        <article class="stat-tile">
+          <span class="stat-label" data-i18n="status.position">Patients Ahead</span>
+          <span class="stat-value" id="position" data-count="0" style="font-size:32px">0</span>
+        </article>
+        <article class="stat-tile">
+          <span class="stat-label" data-i18n="status.wait">Estimated Wait</span>
+          <span class="stat-value" id="wait-value" style="font-size:32px">—</span>
+        </article>
+      </div>
+
+      <!-- Hospital Coordinator Helpline Card -->
+      <div class="coord-card" id="hospital-coord-card">
+        <div>
+          <span style="font-size:11px;font-weight:800;color:var(--primary);text-transform:uppercase;letter-spacing:0.5px">Hospital Coordinator Helpline</span>
+          <h3 style="margin:4px 0 2px;font-size:16px;font-weight:700" id="status-h-name">Baari City Care Hospital</h3>
+          <p style="margin:0;font-size:13px;color:var(--text-muted)">
+            Coordinator: <strong id="status-coord-name">Dr. Sunita Deshmukh</strong> &bull; <span id="status-h-loc">Camp Campus</span>
+          </p>
+          <p style="margin:4px 0 0;font-size:12px;color:var(--text-secondary)">
+            Need emergency triage adjustment or directions? Contact coordinator directly.
+          </p>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <a href="tel:+919823045678" class="call-coord-btn" id="btn-call-coord">
+            <svg class="icon" aria-hidden="true" style="width:16px;height:16px;fill:currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+            <span id="call-coord-label">Call Coordinator</span>
+          </a>
+          <a href="tel:+919823011223" class="btn btn-secondary btn-sm" id="btn-emerg-helpline" style="border-radius:999px;font-weight:700;display:none;color:#ef4444;border-color:#fca5a5">
+            🚨 24x7 Emergency
+          </a>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+      <span data-i18n="brand">Baari Healthcare</span>
+      <span data-i18n="footer">Calm, dignified queues for hospitals and patients.</span>
+    </div>
+  </footer>
+</body>
+</html>

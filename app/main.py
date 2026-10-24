@@ -73,6 +73,11 @@ app.include_router(admin.router)
 app.include_router(simulation.router)
 
 
+@app.get("/api/health")
+async def health():
+    return {"ok": True, "service": "baari"}
+
+
 @app.api_route("/api/voice/tts", methods=["GET", "HEAD"])
 async def tts_alias(request: Request):
     """Direct alias for neural TTS."""
@@ -86,26 +91,75 @@ async def tts_alias(request: Request):
 
 # ── Static files ───────────────────────────────────────────────────────────
 
-static_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "static")
+# Resolve frontend from the project root so HTML/CSS/JS stay in sync with the API.
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+static_dir = os.path.join(BASE_DIR, "static")
+frontend_dirs = [BASE_DIR]
 if os.path.isdir(static_dir):
+    frontend_dirs.append(static_dir)
     app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
+# Mount root-level asset folders for direct URL access
+_asset_dirs = ["assets", "css", "js"]
+for _d in _asset_dirs:
+    _abs = os.path.join(BASE_DIR, _d)
+    if os.path.isdir(_abs):
+        app.mount(f"/{_d}", StaticFiles(directory=_abs), name=_d)
 
-# ── SPA fallback: serve index.html for all non-API, non-static routes ─────
+
+def _first_existing(*relative_paths: str) -> str | None:
+    for folder in frontend_dirs:
+        for relative in relative_paths:
+            path = os.path.join(folder, relative)
+            if os.path.isfile(path):
+                return path
+    return None
+
+
+# ── Page routes: serve named HTML files ────────────────────────────────────
+
+_HTML_PAGES = {
+    "": "index.html",
+    "index": "index.html",
+    "login": "login.html",
+    "staff": "staff.html",
+    "admin": "admin.html",
+    "token": "token.html",
+    "status": "status.html",
+    "change-password": "change-password.html",
+    "403": "403.html",
+    "404": "404.html",
+}
+
 
 @app.api_route("/{full_path:path}", methods=["GET", "HEAD"])
-async def serve_spa(request: Request, full_path: str):
-    """Serve the single-page app for all frontend routes."""
-    # Don't serve SPA for API routes
+async def serve_frontend(request: Request, full_path: str):
+    """Serve named HTML pages or fall back to index.html for the SPA."""
+    # Don't serve static/html for API routes
     if full_path.startswith("api/"):
         return JSONResponse(status_code=404, content={"detail": "Not found"})
 
-    index_path = os.path.join(static_dir, "index.html")
-    if os.path.exists(index_path):
-        return FileResponse(index_path)
+    # Strip trailing slash and .html extension for clean routing
+    page_key = full_path.rstrip("/").removesuffix(".html").lower()
+
+    # Check for known page
+    filename = _HTML_PAGES.get(page_key)
+    if filename:
+        page_path = _first_existing(filename)
+        if page_path:
+            return FileResponse(page_path)
+
+    # Fallback: try to serve the file directly (CSS, JS, images, etc.)
+    file_path = _first_existing(full_path)
+    if file_path:
+        return FileResponse(file_path)
+
+    # Final fallback: 404 page or JSON
+    not_found = _first_existing("404.html")
+    if not_found:
+        return FileResponse(not_found, status_code=404)
 
     return JSONResponse(
         status_code=404,
-        content={"detail": "Frontend not built yet. Run from the baari/ directory."},
+        content={"detail": "Page not found"},
     )
-

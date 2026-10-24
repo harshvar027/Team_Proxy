@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#fbfbfd">
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#000000">
+  <title>Hospital Administration & Queue Console · Baari</title>
+  <link rel="icon" type="image/png" href="assets/favicon.png">
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/motion.css">
+  <link rel="stylesheet" href="css/pages.css">
+  <script type="module" src="js/theme.js"></script>
+  <script type="module" src="js/i18n.js"></script>
+  <script type="module" src="js/motion.js"></script>
+  <script type="module" src="js/ui.js"></script>
+  <script type="module" src="js/admin.js"></script>
+  <style>
+    .qr-card-hero {
+      background: linear-gradient(135deg, rgba(0,102,204,0.08) 0%, rgba(99,102,241,0.06) 100%);
+      border: 1px solid rgba(0,102,204,0.2);
+      border-radius: var(--radius-lg, 20px);
+      padding: 24px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 24px;
+      align-items: center;
+      margin-bottom: 24px;
+    }
+    .qr-preview-box {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      padding: 16px;
+      border-radius: 16px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 190px;
+      flex-shrink: 0;
+      text-align: center;
+    }
+    .qr-preview-img {
+      width: 158px; height: 158px; border-radius: 8px; display: block;
+    }
+    .hospital-meta-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-top: 16px;
+    }
+    .hospital-meta-item {
+      background: var(--surface-2);
+      padding: 14px 16px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+    }
+    .hospital-meta-item span {
+      font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text-2); display: block;
+    }
+    .hospital-meta-item strong {
+      font-size: 15px; color: var(--text); margin-top: 2px; display: block;
+    }
+    .priority-badge-sm {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; text-transform: uppercase;
+    }
+    .p-emergency { background: color-mix(in srgb, var(--danger) 16%, var(--surface)); color: var(--danger); }
+    .p-daily { background: color-mix(in srgb, var(--warning) 16%, var(--surface)); color: var(--warning); }
+    .p-routine { background: color-mix(in srgb, var(--accent) 16%, var(--surface)); color: var(--accent); }
+    .filter-bar {
+      display: flex; flex-wrap: wrap; gap: 12px; align-items: center;
+      background: var(--surface-2); padding: 12px 16px; border: 1px solid var(--line);
+      border-radius: 12px; margin-bottom: 16px;
+    }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#main" data-i18n="skip">Skip to content</a>
+  <div class="offline-banner" id="offline-banner" hidden data-i18n="errors.offline">You’re offline. We’ll keep trying.</div>
+  
+  <header class="nav" data-nav>
+    <div class="nav-inner">
+      <a class="nav-brand" href="index.html">
+        <img class="brand-logo" src="assets/logo.png" alt="Baari" width="44" height="44">
+        <span data-i18n="brand">Baari Healthcare</span>
+      </a>
+      <nav class="nav-links" aria-label="Primary">
+        <a class="nav-link" href="staff.html" data-i18n="nav.staff">Staff Desk</a>
+        <a class="nav-link is-active" href="admin.html" data-i18n="nav.admin">Hospital Admin</a>
+      </nav>
+      <div class="nav-actions">
+        <div class="lang-switch" role="group" data-i18n-aria="nav.language">
+          <button type="button" data-lang-btn="en">EN</button>
+          <button type="button" data-lang-btn="hi">हि</button>
+          <button type="button" data-lang-btn="mr">मर</button>
+        </div>
+        <button class="theme-toggle" type="button" data-theme-toggle data-i18n-aria="nav.toggleTheme">
+          <svg class="icon" aria-hidden="true"><use href="assets/icons.svg#sun"></use></svg>
+        </button>
+        <div data-auth-slot></div>
+      </div>
+    </div>
+  </header>
+
+  <main id="main" class="page" data-tab-scope style="max-width:1160px;margin:0 auto;padding:24px 20px;">
+    <header class="page-header">
+      <div>
+        <h1 class="title-1" id="dash-hospital-title">Hospital Command Center</h1>
+        <p class="muted" id="dash-hospital-subtitle">Manage queues, coordinator hotline, patient QR poster, and OPD counters.</p>
+      </div>
+      <div class="cluster">
+        <button class="btn btn-secondary" type="button" data-open-modal="edit-hospital">
+          <svg class="icon" aria-hidden="true" style="width:16px;height:16px"><use href="assets/icons.svg#edit"></use></svg>
+          <span>Hospital Profile</span>
+        </button>
+        <button class="btn btn-primary" type="button" data-open-modal="walkin">
+          <span>+ Fast-Track / Walk-in</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <div class="tabs" data-tabs role="tablist">
+      <button class="tab-btn is-active" type="button" role="tab" data-tab="queues" aria-selected="true">
+        📋 Master Queues
+      </button>
+      <button class="tab-btn" type="button" role="tab" data-tab="hospital" aria-selected="false">
+        🏥 Hospital & QR Code
+      </button>
+      <button class="tab-btn" type="button" role="tab" data-tab="overview" aria-selected="false" data-i18n="admin.overview">
+        📊 Analytics
+      </button>
+      <button class="tab-btn" type="button" role="tab" data-tab="users" aria-selected="false" data-i18n="admin.users">
+        👥 Users
+      </button>
+      <button class="tab-btn" type="button" role="tab" data-tab="departments" aria-selected="false" data-i18n="admin.departments">
+        🏢 Departments
+      </button>
+      <button class="tab-btn" type="button" role="tab" data-tab="audit" aria-selected="false" data-i18n="admin.audit">
+        📋 Audit Log
+      </button>
+    </div>
+
+    <!-- TAB 1: MASTER QUEUES (All Queues across departments with filters & full actions) -->
+    <section class="tab-panel stack" data-tab-panel="queues" style="padding-top:24px">
+      <!-- KPI Cards -->
+      <div class="stats" id="queue-kpi-stats">
+        <article class="stat-tile">
+          <span class="stat-label">Waiting in Queue</span>
+          <span class="stat-value" id="kpi-waiting" data-count="0">0</span>
+        </article>
+        <article class="stat-tile" style="border-left: 3px solid #ef4444;">
+          <span class="stat-label">🚨 Emergency Cases</span>
+          <span class="stat-value" id="kpi-emergency" data-count="0" style="color:#ef4444">0</span>
+        </article>
+        <article class="stat-tile" style="border-left: 3px solid #f59e0b;">
+          <span class="stat-label">⚡ Daily Life Urgent</span>
+          <span class="stat-value" id="kpi-daily" data-count="0" style="color:#f59e0b">0</span>
+        </article>
+        <article class="stat-tile">
+          <span class="stat-label">🩺 Routine Checkups</span>
+          <span class="stat-value" id="kpi-routine" data-count="0">0</span>
+        </article>
+        <article class="stat-tile">
+          <span class="stat-label">Served Today</span>
+          <span class="stat-value" id="kpi-done" data-count="0">0</span>
+        </article>
+      </div>
+
+      <!-- Filters & Call Next Toolbar -->
+      <div class="filter-bar spread">
+        <div class="cluster" style="gap:10px">
+          <div>
+            <label class="vh" for="filter-dept">Department</label>
+            <select class="select" id="filter-dept" style="padding:6px 12px;font-size:13px;height:36px">
+              <option value="all">All Departments</option>
+            </select>
+          </div>
+          <div>
+            <label class="vh" for="filter-priority">Priority</label>
+            <select class="select" id="filter-priority" style="padding:6px 12px;font-size:13px;height:36px">
+              <option value="all">All Priorities</option>
+              <option value="emergency">🚨 Emergency (Level 1)</option>
+              <option value="daily_life">⚡ Daily Life Urgent (Level 2)</option>
+              <option value="routine">🩺 Routine (Level 3)</option>
+            </select>
+          </div>
+          <div>
+            <label class="vh" for="filter-status">Status</label>
+            <select class="select" id="filter-status" style="padding:6px 12px;font-size:13px;height:36px">
+              <option value="all">Active & Waiting</option>
+              <option value="waiting">Waiting Only</option>
+              <option value="called">Currently Called</option>
+              <option value="done">Completed</option>
+            </select>
+          </div>
+        </div>
+        <div class="cluster">
+          <button class="btn btn-primary" type="button" id="btn-call-next-global">
+            <span>Call Next Patient &rarr;</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Queue Table -->
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Token #</th>
+              <th>Patient Name</th>
+              <th>Priority Tier</th>
+              <th>Department</th>
+              <th>Symptoms / Reason</th>
+              <th>Status</th>
+              <th>Arrived</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="master-queue-body">
+            <tr>
+              <td colspan="8" style="text-align:center;padding:32px;color:var(--text-muted)">Loading hospital queue...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- TAB 2: HOSPITAL RECORD & QR CODE HUB -->
+    <section class="tab-panel stack" data-tab-panel="hospital" hidden style="padding-top:24px">
+      <!-- QR Poster Hero -->
+      <div class="qr-card-hero">
+        <div class="qr-preview-box">
+          <img class="qr-preview-img" id="hospital-qr-img" src="/api/patient/hospital/1/qr" alt="Hospital Check-in QR Code">
+          <p style="font-size:11px;font-weight:700;margin:8px 0 2px;color:var(--primary)" id="qr-h-code">HOSP-01</p>
+          <span style="font-size:10px;color:var(--text-muted)">Scan to Check-In</span>
+        </div>
+        <div style="flex:1;min-width:280px">
+          <span class="badge badge-primary" style="margin-bottom:8px">Physical Desk / Entrance Poster</span>
+          <h2 class="title-2" style="margin:4px 0 6px" id="qr-h-name">Baari City Care Hospital</h2>
+          <p class="muted" style="margin:0 0 16px;line-height:1.4">
+            Display this QR code at your hospital registration desk, reception, or entrance. Patients simply point their smartphone camera to instantly access your customized OPD check-in portal with <strong>AI symptom triage</strong> and live queue status.
+          </p>
+          <div class="cluster" style="gap:10px">
+            <a class="btn btn-primary" id="btn-download-qr" download="hospital_qr.png" href="/api/patient/hospital/1/qr">
+              <svg class="icon" aria-hidden="true" style="width:16px;height:16px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" stroke="currentColor" fill="none" stroke-width="2"/></svg>
+              <span>Download QR Code</span>
+            </a>
+            <button class="btn btn-secondary" type="button" id="btn-print-poster">
+              <svg class="icon" aria-hidden="true" style="width:16px;height:16px"><use href="assets/icons.svg#clipboard"></use></svg>
+              <span>Print Poster</span>
+            </button>
+            <button class="btn btn-tertiary" type="button" id="btn-copy-link">
+              <svg class="icon" aria-hidden="true" style="width:16px;height:16px"><use href="assets/icons.svg#copy"></use></svg>
+              <span>Copy Link</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Hospital Details Card -->
+      <div class="card" style="padding:24px">
+        <div class="spread" style="align-items:center">
+          <div>
+            <h3 class="headline" style="margin:0">Hospital Record & Coordinator Contact</h3>
+            <p class="muted" style="margin:2px 0 0;font-size:13px">This information is shown to all patients in their queue status view.</p>
+          </div>
+          <button class="btn btn-secondary btn-sm" type="button" data-open-modal="edit-hospital">
+            <span>Edit Information</span>
+          </button>
+        </div>
+
+        <div class="hospital-meta-grid">
+          <div class="hospital-meta-item">
+            <span>Hospital Name</span>
+            <strong id="card-h-name">Baari City Care Hospital</strong>
+          </div>
+          <div class="hospital-meta-item">
+            <span>Hospital Code</span>
+            <strong id="card-h-code">HOSP-01</strong>
+          </div>
+          <div class="hospital-meta-item">
+            <span>Location / Address</span>
+            <strong id="card-h-loc">Pune Medical Complex</strong>
+          </div>
+          <div class="hospital-meta-item">
+            <span>Head Coordinator</span>
+            <strong id="card-coord-name">Dr. Sunita Deshmukh</strong>
+          </div>
+          <div class="hospital-meta-item" style="border-left: 3px solid #10b981;">
+            <span>Coordinator Helpline</span>
+            <strong id="card-coord-phone" style="color:#059669">+91 98230 45678</strong>
+          </div>
+          <div class="hospital-meta-item" style="border-left: 3px solid #ef4444;">
+            <span>24x7 Emergency Helpline</span>
+            <strong id="card-emerg-phone" style="color:#dc2626">+91 98230 11223</strong>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 3: OVERVIEW & ANALYTICS -->
+    <section class="tab-panel stack" data-tab-panel="overview" hidden style="padding-top:24px">
+      <div class="stats" id="overview-stats">
+        <article class="stat-tile"><span class="stat-label" data-i18n="admin.served">Served today</span><span class="stat-value" id="kpi-served" data-count="0">0</span></article>
+        <article class="stat-tile"><span class="stat-label" data-i18n="admin.avgWait">Average wait</span><span class="stat-value" id="kpi-wait" data-count="0" data-suffix=" min">0</span></article>
+        <article class="stat-tile"><span class="stat-label" data-i18n="admin.noShows">No-shows</span><span class="stat-value" id="kpi-noshow" data-count="0">0</span></article>
+        <article class="stat-tile"><span class="stat-label" data-i18n="admin.peak">Peak hour</span><span class="stat-value" id="kpi-peak">—</span></article>
+      </div>
+      <div class="card chart-card">
+        <h2 class="headline">Hourly Patient Inflow</h2>
+        <div class="chart-svg-wrap">
+          <svg class="chart-svg" id="overview-chart" role="img" aria-label="Hourly patients served"></svg>
+          <div class="chart-tip" id="overview-tip"></div>
+        </div>
+        <div class="skeleton" id="overview-skel" style="height:240px"></div>
+      </div>
+    </section>
+
+    <!-- TAB 4: USERS -->
+    <section class="tab-panel" data-tab-panel="users" hidden style="padding-top:24px">
+      <div class="spread" style="margin-bottom:16px">
+        <h2 class="headline" data-i18n="admin.users">Hospital Users & Staff</h2>
+        <button class="btn btn-primary" type="button" data-open-modal="user" data-i18n="admin.createUser">Create user</button>
+      </div>
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Username</th>
+              <th>Role</th>
+              <th>Department</th>
+              <th>Status</th>
+              <th data-i18n="staff.actions">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="users-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- TAB 5: DEPARTMENTS -->
+    <section class="tab-panel" data-tab-panel="departments" hidden style="padding-top:24px">
+      <div class="spread" style="margin-bottom:16px">
+        <h2 class="headline" data-i18n="admin.departments">OPD Departments & Counters</h2>
+        <div class="cluster">
+          <button class="btn btn-secondary" type="button" data-open-modal="doctor" data-i18n="admin.createDoctor">Add doctor</button>
+          <button class="btn btn-primary" type="button" data-open-modal="dept" data-i18n="admin.createDept">Add department</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table class="table">
+          <thead><tr><th>Name</th><th>Code</th><th>Avg Service Minutes</th></tr></thead>
+          <tbody id="depts-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- TAB 6: AUDIT LOG -->
+    <section class="tab-panel stack" data-tab-panel="audit" hidden style="padding-top:24px">
+      <h2 class="headline" data-i18n="admin.audit">Audit Log</h2>
+      <div class="table-wrap">
+        <table class="table">
+          <thead><tr><th>Time</th><th>User</th><th>Role</th><th>Action</th><th>Details</th></tr></thead>
+          <tbody id="audit-body"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <!-- MODAL 1: Edit Hospital Profile -->
+  <div class="modal-backdrop" data-modal="edit-hospital" hidden>
+    <div class="modal" role="dialog" aria-modal="true" tabindex="-1">
+      <div class="modal-header">
+        <h2 class="headline">Edit Hospital Record</h2>
+        <button class="btn btn-icon" type="button" data-close-modal="edit-hospital">
+          <svg class="icon" aria-hidden="true"><use href="assets/icons.svg#x"></use></svg>
+        </button>
+      </div>
+      <form id="edit-hospital-form" class="stack">
+        <div class="field">
+          <div class="field-control">
+            <input class="field-input" id="edit-h-name" placeholder=" " required>
+            <label class="field-label" for="edit-h-name">Hospital Name</label>
+          </div>
+        </div>
+        <div class="field">
+          <div class="field-control">
+            <input class="field-input" id="edit-h-loc" placeholder=" " required>
+            <label class="field-label" for="edit-h-loc">Location / Address</label>
+          </div>
+        </div>
+        <div class="field">
+          <div class="field-control">
+            <input class="field-input" id="edit-h-coord-name" placeholder=" " required>
+            <label class="field-label" for="edit-h-coord-name">Head Coordinator Name</label>
+          </div>
+        </div>
+        <div class="field">
+          <div class="field-control">
+            <input class="field-input" id="edit-h-coord-phone" placeholder=" " required>
+            <label class="field-label" for="edit-h-coord-phone">Coordinator Phone Number (Helpline)</label>
+          </div>
+        </div>
+        <div class="field">
+          <div class="field-control">
+            <input class="field-input" id="edit-h-emerg-phone" placeholder=" ">
+            <label class="field-label" for="edit-h-emerg-phone">Emergency 24x7 Phone Number</label>
+          </div>
+        </div>
+        <button class="btn btn-primary btn-lg" type="submit" id="btn-save-hospital">
+          <span class="btn-label">Save Hospital Profile</span>
+          <span class="spinner" aria-hidden="true"></span>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL 2: Edit Token / Priority / Department -->
+  <div class="modal-backdrop" data-modal="edit-token" hidden>
+    <div class="modal" role="dialog" aria-modal="true" tabindex="-1">
+      <div class="modal-header">
+        <h2 class="headline" id="edit-token-title">Edit Queue Token</h2>
+        <button class="btn btn-icon" type="button" data-close-modal="edit-token">
+          <svg class="icon" aria-hidden="true"><use href="assets/icons.svg#x"></use></svg>
+        </button>
+      </div>
+      <form id="edit-token-form" class="stack">
+        <input type="hidden" id="edit-token-id">
+        <div class="field">
+          <div class="field-control">
+            <input class="field-input" id="edit-token-patient" placeholder=" " required>
+            <label class="field-label" for="edit-token-patient">Patient Name</label>
+          </div>
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:700;display:block;margin-bottom:6px">Priority Classification</label>
+          <div class="select-wrap">
+            <select class="select" id="edit-token-priority">
+              <option value="emergency">🚨 Emergency / Critical (Priority 1)</option>
+              <option value="daily_life">⚡ Daily Life Problem (Priority 2)</option>
+              <option value="routine">🩺 Routine Checkup (Priority 3)</option>
+            </select>
+            <svg class="icon select-arrow" aria-hidden="true"><use href="assets/icons.svg#chevron-down"></use></svg>
+          </div>
+        </div>
+        <div class="field">
+          <div class="field-control">
+            <input class="field-input" id="edit-token-reason" placeholder=" ">
+            <label class="field-label" for="edit-token-reason">Reason or Symptoms</label>
+          </div>
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:700;display:block;margin-bottom:6px">Reassign Department</label>
+          <div class="select-wrap">
+            <select class="select" id="edit-token-dept"></select>
+            <svg class="icon select-arrow" aria-hidden="true"><use href="assets/icons.svg#chevron-down"></use></svg>
+          </div>
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:700;display:block;margin-bottom:6px">Status</label>
+          <div class="select-wrap">
+            <select class="select" id="edit-token-status">
+              <option value="waiting">Waiting</option>
+              <option value="called">Called (In consultation)</option>
+              <option value="done">Completed (Done)</option>
+              <option value="no_show">No-Show</option>
+            </select>
+            <svg class="icon select-arrow" aria-hidden="true"><use href="assets/icons.svg#chevron-down"></use></svg>
+          </div>
+        </div>
+        <button class="btn btn-primary btn-lg" type="submit" id="btn-save-token">
+          <span class="btn-label">Update Queue Record</span>
+          <span class="spinner" aria-hidden="true"></span>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL 3: Issue Walk-In / Fast-Track -->
+  <div class="modal-backdrop" data-modal="walkin" hidden>
+    <div class="modal" role="dialog" aria-modal="true" tabindex="-1">
+      <div class="modal-header">
+        <h2 class="headline">Issue Walk-In / Emergency Token</h2>
+        <button class="btn btn-icon" type="button" data-close-modal="walkin">
+          <svg class="icon" aria-hidden="true"><use href="assets/icons.svg#x"></use></svg>
+        </button>
+      </div>
+      <form id="walkin-form" class="stack">
+        <div class="field">
+          <div class="field-control">
+            <input class="field-input" id="walkin-name" placeholder=" " required>
+            <label class="field-label" for="walkin-name">Patient Full Name</label>
+          </div>
+        </div>
+        <div class="field">
+          <div class="field-control">
+            <input class="field-input" id="walkin-phone" type="tel" placeholder=" ">
+            <label class="field-label" for="walkin-phone">Mobile Phone (Optional)</label>
+          </div>
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:700;display:block;margin-bottom:6px">Department</label>
+          <div class="select-wrap">
+            <select class="select" id="walkin-dept"></select>
+            <svg class="icon select-arrow" aria-hidden="true"><use href="assets/icons.svg#chevron-down"></use></svg>
+          </div>
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:700;display:block;margin-bottom:6px">Urgency Classification</label>
+          <div class="select-wrap">
+            <select class="select" id="walkin-priority">
+              <option value="emergency">🚨 Emergency / Critical (Level 1)</option>
+              <option value="daily_life" selected>⚡ Daily Life Problem (Level 2)</option>
+              <option value="routine">🩺 Routine Checkup (Level 3)</option>
+            </select>
+            <svg class="icon select-arrow" aria-hidden="true"><use href="assets/icons.svg#chevron-down"></use></svg>
+          </div>
+        </div>
+        <div class="field">
+          <div class="field-control">
+            <input class="field-input" id="walkin-reason" placeholder=" ">
+            <label class="field-label" for="walkin-reason">Reason or Symptoms</label>
+          </div>
+        </div>
+        <button class="btn btn-primary btn-lg" type="submit" id="walkin-submit">
+          <span class="btn-label">Issue Queue Token</span>
+          <span class="spinner" aria-hidden="true"></span>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL 4: Create User -->
+  <div class="modal-backdrop" data-modal="user" hidden>
+    <div class="modal" role="dialog" aria-modal="true" tabindex="-1">
+      <div class="modal-header">
+        <h2 class="headline" data-i18n="admin.createUser">Create user</h2>
+        <button class="btn btn-icon" type="button" data-close-modal="user">
+          <svg class="icon" aria-hidden="true"><use href="assets/icons.svg#x"></use></svg>
+        </button>
+      </div>
+      <form id="user-form" class="stack">
+        <div class="field">
+          <div class="field-control">
+            <input class="field-input" id="new-username" autocomplete="off" placeholder=" " required>
+            <label class="field-label" for="new-username">Username</label>
+          </div>
+        </div>
+        <div class="field">
+          <div class="field-control">
+            <input class="field-input" id="new-password" type="password" placeholder=" " required minlength="6">
+            <label class="field-label" for="new-password">Temporary password</label>
+          </div>
+        </div>
+        <div class="select-wrap">
+          <select class="select" id="new-role">
+            <option value="staff">Staff (Counter)</option>
+            <option value="hospital">Hospital Administrator</option>
+            <option value="admin">System Admin</option>
+          </select>
+          <svg class="icon select-arrow" aria-hidden="true"><use href="assets/icons.svg#chevron-down"></use></svg>
+        </div>
+        <div class="select-wrap" id="new-dept-wrap">
+          <select class="select" id="new-dept"></select>
+          <svg class="icon select-arrow" aria-hidden="true"><use href="assets/icons.svg#chevron-down"></use></svg>
+        </div>
+        <button class="btn btn-primary btn-lg" type="submit">
+          <span class="btn-label" data-i18n="common.save">Save</span>
+          <span class="spinner" aria-hidden="true"></span>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL 5: Add Department -->
+  <div class="modal-backdrop" data-modal="dept" hidden>
+    <div class="modal" role="dialog" aria-modal="true" tabindex="-1">
+      <div class="modal-header">
+        <h2 class="headline" data-i18n="admin.createDept">Add department</h2>
+        <button class="btn btn-icon" type="button" data-close-modal="dept">
+          <svg class="icon" aria-hidden="true"><use href="assets/icons.svg#x"></use></svg>
+        </button>
+      </div>
+      <form id="dept-form" class="stack">
+        <div class="field">
+          <div class="field-control">
+            <input class="field-input" id="dept-name" placeholder=" " required>
+            <label class="field-label" for="dept-name">Department Name</label>
+          </div>
+        </div>
+        <div class="field">
+          <div class="field-control">
+            <input class="field-input" id="dept-code" placeholder=" " maxlength="4" required>
+            <label class="field-label" for="dept-code">Short Code (e.g. GM, OR, ENT)</label>
+          </div>
+        </div>
+        <div class="field">
+          <div class="field-control">
+            <input class="field-input" id="dept-mins" type="number" min="3" max="60" value="8" placeholder=" ">
+            <label class="field-label" for="dept-mins">Average Service Minutes</label>
+          </div>
+        </div>
+        <button class="btn btn-primary btn-lg" type="submit">
+          <span class="btn-label" data-i18n="common.save">Save</span>
+          <span class="spinner" aria-hidden="true"></span>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL 6: Add Doctor -->
+  <div class="modal-backdrop" data-modal="doctor" hidden>
+    <div class="modal" role="dialog" aria-modal="true" tabindex="-1">
+      <div class="modal-header">
+        <h2 class="headline" data-i18n="admin.createDoctor">Add doctor</h2>
+        <button class="btn btn-icon" type="button" data-close-modal="doctor">
+          <svg class="icon" aria-hidden="true"><use href="assets/icons.svg#x"></use></svg>
+        </button>
+      </div>
+      <form id="doctor-form" class="stack">
+        <div class="field">
+          <div class="field-control">
+            <input class="field-input" id="doctor-name" placeholder=" " required>
+            <label class="field-label" for="doctor-name">Doctor Name (e.g. Dr. A. Sharma)</label>
+          </div>
+        </div>
+        <div class="select-wrap">
+          <select class="select" id="doctor-dept"></select>
+          <svg class="icon select-arrow" aria-hidden="true"><use href="assets/icons.svg#chevron-down"></use></svg>
+        </div>
+        <button class="btn btn-primary btn-lg" type="submit">
+          <span class="btn-label" data-i18n="common.save">Save</span>
+          <span class="spinner" aria-hidden="true"></span>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <footer class="footer">
+    <div class="footer-inner">
+      <span data-i18n="brand">Baari Healthcare</span>
+      <span data-i18n="footer">A calm, intelligent queue management platform.</span>
+    </div>
+  </footer>
+</body>
+</html>

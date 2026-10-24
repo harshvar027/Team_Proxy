@@ -1,503 +1,513 @@
-/**
- * Baari — static/js/admin.js
- * Admin Control Center: Hospital KPIs, Staff user management,
- * Department and doctor configuration, Audit log viewer, and queue reset.
- */
+import { api } from "./api.js";
+import { requireAuth } from "./auth.js";
+import { t } from "./i18n.js";
+import {
+  closeModal,
+  copyText,
+  el,
+  formatDate,
+  openModal,
+  setLoading,
+  shake,
+  svgLineChart,
+  toast,
+  updateCount,
+} from "./ui.js";
 
-window.BaariAdmin = {
-  departments: [],
-  users: [],
-  auditLogs: [],
+function bindOffline() {
+  const banner = document.getElementById("offline-banner");
+  if (!banner) return;
+  const sync = () => { banner.hidden = navigator.onLine; };
+  window.addEventListener("online", sync);
+  window.addEventListener("offline", sync);
+  sync();
+}
 
-  init() {
-    this.checkAdminAccess();
-  },
+function bindChartHover(svg, tip, labels, series) {
+  svg.addEventListener("mousemove", (event) => {
+    const rect = svg.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const n = labels.length;
+    const pad = 28;
+    const inner = rect.width - (pad / 640) * rect.width * 2;
+    const i = Math.max(0, Math.min(n - 1, Math.round(((x - (pad / 640) * rect.width) / inner) * (n - 1))));
+    const lines = series.map((s) => `${s.name}: ${s.values[i]}`);
+    tip.textContent = `${labels[i]} · ${lines.join(" · ")}`;
+    tip.style.opacity = "1";
+    tip.style.left = `${x}px`;
+    tip.style.top = `${event.clientY - rect.top}px`;
+  });
+  svg.addEventListener("mouseleave", () => {
+    tip.style.opacity = "0";
+  });
+}
 
-  async checkAdminAccess() {
-    if (!BaariApp.currentUser || BaariApp.currentUser.role !== "admin") {
-      document.getElementById("admin-access-warning").style.display = "block";
-      document.getElementById("admin-content").style.display = "none";
-      return;
-    }
+async function boot() {
+  bindOffline();
+  const user = await requireAuth(["admin", "hospital"]);
+  if (!user) return;
 
-    document.getElementById("admin-access-warning").style.display = "none";
-    document.getElementById("admin-content").style.display = "block";
+  let departments = [];
+  let currentHospital = null;
+  let allTokensData = [];
 
-    this.loadSummary();
-    this.loadUsers();
-    this.loadDepartments();
-    this.loadAuditLogs();
-  },
+  // DOM Elements
+  const dashHospitalTitle = document.getElementById("dash-hospital-title");
+  const dashHospitalSubtitle = document.getElementById("dash-hospital-subtitle");
 
-  async loadSummary() {
-    try {
-      const s = await BaariApp.fetchApi("/api/admin/summary");
-      document.getElementById("adm-stat-served").textContent = s.patients_served;
-      document.getElementById("adm-stat-avg-wait").textContent = `${s.average_wait_minutes}m`;
-      document.getElementById("adm-stat-longest-wait").textContent = `${s.longest_wait_minutes}m`;
-      document.getElementById("adm-stat-peak").textContent = s.peak_hour;
-      document.getElementById("adm-stat-noshow").textContent = `${s.no_show_count} (${s.no_show_rate}%)`;
+  // Tab switching
+  const tabs = document.querySelectorAll("[data-tab]");
+  const panels = document.querySelectorAll("[data-tab-panel]");
 
-      // Render Department Breakdown
-      const deptContainer = document.getElementById("adm-dept-breakdown");
-      if (deptContainer) {
-        deptContainer.innerHTML = s.by_department
-          .map(
-            (d) => `
-          <div class="card" style="padding:1rem;">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-              <strong style="font-size:1.05rem; color:#60a5fa;">${d.department_name} (${d.department_code})</strong>
-              <span class="badge badge-normal">${d.total_tokens} tokens today</span>
-            </div>
-            <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:0.5rem; margin-top:0.75rem; text-align:center;">
-              <div style="background:var(--bg-surface-elevated); padding:0.4rem; border-radius:var(--radius-sm);">
-                <div style="font-size:0.75rem; color:var(--text-muted);">Waiting</div>
-                <div style="font-weight:700; color:#d1d5db;">${d.waiting}</div>
-              </div>
-              <div style="background:var(--bg-surface-elevated); padding:0.4rem; border-radius:var(--radius-sm);">
-                <div style="font-size:0.75rem; color:var(--text-muted);">Done</div>
-                <div style="font-weight:700; color:#34d399;">${d.done}</div>
-              </div>
-              <div style="background:var(--bg-surface-elevated); padding:0.4rem; border-radius:var(--radius-sm);">
-                <div style="font-size:0.75rem; color:var(--text-muted);">No-Show</div>
-                <div style="font-weight:700; color:#f87171;">${d.no_show}</div>
-              </div>
-            </div>
-          </div>
-        `
-          )
-          .join("");
-      }
-    } catch (err) {}
-  },
-
-  async loadUsers() {
-    try {
-      const users = await BaariApp.fetchApi("/api/admin/users");
-      this.users = users;
-      const tbody = document.getElementById("adm-users-tbody");
-      if (!tbody) return;
-
-      tbody.innerHTML = users
-        .map((u) => {
-          const isMe = u.id === BaariApp.currentUser?.id;
-          const statusBtn = isMe
-            ? `<span style="color:var(--text-dim); font-size:0.8rem;">(Current)</span>`
-            : `
-            <button class="btn ${u.active ? "btn-danger" : "btn-success"}" 
-                    style="padding:0.2rem 0.5rem; font-size:0.75rem;" 
-                    onclick="BaariAdmin.toggleUser(${u.id})">
-              ${u.active ? "Disable" : "Enable"}
-            </button>
-            <button class="btn btn-secondary" 
-                    style="padding:0.2rem 0.5rem; font-size:0.75rem; margin-left:0.25rem;" 
-                    onclick="BaariAdmin.promptResetPassword(${u.id}, '${u.username}')">
-              Reset Pass
-            </button>
-          `;
-
-          return `
-          <tr>
-            <td><strong>${u.username}</strong></td>
-            <td><span class="badge ${u.role === "admin" ? "badge-priority" : "badge-normal"}">${u.role}</span></td>
-            <td>${u.department_name || "All Departments (Admin)"}</td>
-            <td><span class="badge ${u.active ? "badge-called" : "badge-done"}">${u.active ? "Active" : "Disabled"}</span></td>
-            <td>${statusBtn}</td>
-          </tr>
-        `;
-        })
-        .join("");
-    } catch (err) {}
-  },
-
-  async toggleUser(userId) {
-    try {
-      await BaariApp.fetchApi(`/api/admin/users/${userId}/toggle`, { method: "POST" });
-      BaariApp.showToast("User status updated", "info");
-      this.loadUsers();
-    } catch (err) {
-      BaariApp.showToast(err.message, "error");
-    }
-  },
-
-  async promptResetPassword(userId, username) {
-    const newPass = prompt(`Enter new password for ${username} (min 8 chars):`);
-    if (!newPass) return;
-    if (newPass.length < 8) {
-      alert("Password must be at least 8 characters long");
-      return;
-    }
-
-    try {
-      await BaariApp.fetchApi(`/api/admin/users/${userId}/reset-password`, {
-        method: "POST",
-        body: JSON.stringify({ new_password: newPass }),
-      });
-      BaariApp.showToast(`Password reset for ${username}`, "success");
-    } catch (err) {
-      BaariApp.showToast(err.message, "error");
-    }
-  },
-
-  async loadDepartments() {
-    try {
-      const depts = await BaariApp.fetchApi("/api/admin/departments");
-      this.departments = depts;
-
-      // Populate department select in Add User modal
-      const userDeptSelect = document.getElementById("new-user-dept");
-      if (userDeptSelect) {
-        userDeptSelect.innerHTML = depts
-          .map((d) => `<option value="${d.id}">${d.name} (${d.code})</option>`)
-          .join("");
-      }
-
-      // Populate department select in Add Doctor modal
-      const docDeptSelect = document.getElementById("new-doc-dept");
-      if (docDeptSelect) {
-        docDeptSelect.innerHTML = depts
-          .map((d) => `<option value="${d.id}">${d.name} (${d.code})</option>`)
-          .join("");
-      }
-    } catch (err) {}
-  },
-
-  async loadAuditLogs() {
-    try {
-      const logs = await BaariApp.fetchApi("/api/admin/audit?per_page=40");
-      this.auditLogs = logs;
-      const tbody = document.getElementById("adm-audit-tbody");
-      if (!tbody) return;
-
-      tbody.innerHTML = logs
-        .map((l) => {
-          const dt = new Date(l.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
-          return `
-          <tr>
-            <td style="font-family:var(--font-mono); font-size:0.8rem; color:var(--text-muted);">${dt}</td>
-            <td><strong>${l.action}</strong></td>
-            <td><span class="badge ${l.actor_role === "admin" ? "badge-priority" : "badge-normal"}">${l.actor_username || l.actor_role}</span></td>
-            <td style="font-family:var(--font-mono); font-size:0.75rem; color:var(--text-muted); max-width:300px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${l.details || ""}">
-              ${l.details || "—"}
-            </td>
-          </tr>
-        `;
-        })
-        .join("");
-    } catch (err) {}
-  },
-
-  // ── Create User ─────────────────────────────────────────────────────────
-  openAddUserModal() {
-    const modal = document.getElementById("add-user-modal");
-    if (modal) modal.showModal();
-  },
-
-  closeAddUserModal() {
-    const modal = document.getElementById("add-user-modal");
-    if (modal) modal.close();
-  },
-
-  async handleAddUser(e) {
-    e.preventDefault();
-    const u = document.getElementById("new-username").value.trim();
-    const p = document.getElementById("new-password").value;
-    const r = document.getElementById("new-role").value;
-    const d = document.getElementById("new-user-dept").value;
-
-    try {
-      await BaariApp.fetchApi("/api/admin/users", {
-        method: "POST",
-        body: JSON.stringify({
-          username: u,
-          password: p,
-          role: r,
-          department_id: r === "staff" ? parseInt(d, 10) : null,
-        }),
-      });
-
-      BaariApp.showToast(`User ${u} created successfully`, "success");
-      this.closeAddUserModal();
-      document.getElementById("add-user-form").reset();
-      this.loadUsers();
-    } catch (err) {
-      BaariApp.showToast(err.message, "error");
-    }
-  },
-
-  // ── Create Department ───────────────────────────────────────────────────
-  openAddDeptModal() {
-    const modal = document.getElementById("add-dept-modal");
-    if (modal) modal.showModal();
-  },
-
-  closeAddDeptModal() {
-    const modal = document.getElementById("add-dept-modal");
-    if (modal) modal.close();
-  },
-
-  async handleAddDept(e) {
-    e.preventDefault();
-    const name = document.getElementById("new-dept-name").value.trim();
-    const code = document.getElementById("new-dept-code").value.trim().toUpperCase();
-    const avg = parseFloat(document.getElementById("new-dept-avg").value || 8.0);
-
-    try {
-      await BaariApp.fetchApi("/api/admin/departments", {
-        method: "POST",
-        body: JSON.stringify({ name, code, avg_service_minutes: avg }),
-      });
-
-      BaariApp.showToast(`Department ${name} created`, "success");
-      this.closeAddDeptModal();
-      document.getElementById("add-dept-form").reset();
-      this.loadDepartments();
-      this.loadSummary();
-    } catch (err) {
-      BaariApp.showToast(err.message, "error");
-    }
-  },
-
-  // ── Reset Day Queue ─────────────────────────────────────────────────────
-  async resetDay() {
-    if (!confirm("Are you sure you want to reset today's queue? All tokens and consultations for today will be cleared.")) return;
-    try {
-      const res = await BaariApp.fetchApi("/api/admin/reset-day", { method: "POST" });
-      BaariApp.showToast(res.message, "info");
-      this.loadSummary();
-      this.loadAuditLogs();
-    } catch (err) {
-      BaariApp.showToast(err.message, "error");
-    }
-  },
-
-  // ── Hospital QR Code Generation & Poster ────────────────────────────────
-  generateHospitalQR() {
-    const hospName = document.getElementById("qr-gen-hospital-name")?.value.trim() || "District Government Hospital";
-    const hospCode = document.getElementById("qr-gen-code")?.value.trim() || "BAARI-GH-MUM-001";
-    const displayContainer = document.getElementById("hospital-qr-display");
-    if (!displayContainer) return;
-
-    displayContainer.innerHTML = "";
-
-    // Build the public URL encoded in the QR code
-    const origin = window.location.origin;
-    const targetUrl = `${origin}/?qr=1&hospital=${encodeURIComponent(hospName)}&code=${encodeURIComponent(hospCode)}`;
-
-    // Create QR code using QRCode library
-    const qrDiv = document.createElement("div");
-    qrDiv.id = "admin-qrcode-canvas-wrapper";
-    qrDiv.style.background = "#ffffff";
-    qrDiv.style.padding = "16px";
-    qrDiv.style.borderRadius = "12px";
-    qrDiv.style.display = "inline-block";
-    qrDiv.style.boxShadow = "0 8px 24px rgba(0,0,0,0.2)";
-
-    displayContainer.appendChild(qrDiv);
-
-    if (window.QRCode) {
-      new QRCode(qrDiv, {
-        text: targetUrl,
-        width: 200,
-        height: 200,
-        colorDark: "#0f172a",
-        colorLight: "#ffffff",
-        correctLevel: QRCode.CorrectLevel.H,
-      });
-    } else {
-      qrDiv.innerHTML = `<div style="padding:2rem; color:#ef4444;">QRCode library not loaded</div>`;
-    }
-
-    // Action buttons under QR
-    const actionsDiv = document.createElement("div");
-    actionsDiv.style.marginTop = "1rem";
-    actionsDiv.style.display = "flex";
-    actionsDiv.style.gap = "0.5rem";
-    actionsDiv.style.justifyContent = "center";
-    actionsDiv.style.flexWrap = "wrap";
-
-    actionsDiv.innerHTML = `
-      <button class="btn btn-primary" onclick="BaariAdmin.printHospitalPoster('${hospName}', '${hospCode}', '${targetUrl}')">
-        🖨️ Print Official Poster
-      </button>
-      <button class="btn btn-secondary" onclick="BaariAdmin.copyRegistrationUrl('${targetUrl}')">
-        📋 Copy Scan URL
-      </button>
-    `;
-    displayContainer.appendChild(actionsDiv);
-
-    BaariApp.showToast(`QR Code generated for ${hospName}`, "success");
-  },
-
-  copyRegistrationUrl(url) {
-    navigator.clipboard.writeText(url).then(() => {
-      BaariApp.showToast("Registration URL copied to clipboard!", "success");
-    }).catch(() => {
-      prompt("Copy this URL:", url);
+  const activateTab = (tabName) => {
+    tabs.forEach((t) => {
+      const match = t.getAttribute("data-tab") === tabName;
+      t.classList.toggle("is-active", match);
+      t.setAttribute("aria-selected", match);
     });
-  },
+    panels.forEach((p) => {
+      const match = p.getAttribute("data-tab-panel") === tabName;
+      p.hidden = !match;
+    });
 
-  printHospitalPoster(hospName, hospCode, targetUrl) {
-    const printWin = window.open("", "_blank", "width=800,height=900");
-    if (!printWin) {
-      BaariApp.showToast("Popup blocked. Please allow popups to print poster.", "warning");
-      return;
+    if (tabName === "queues") loadAllQueues();
+    if (tabName === "hospital") loadHospitalTab();
+    if (tabName === "overview") loadOverview();
+    if (tabName === "users") loadUsers();
+    if (tabName === "departments") loadDepartments();
+    if (tabName === "audit") loadAudit();
+  };
+
+  tabs.forEach((tab) => {
+    tab.addEventListener("click", () => {
+      activateTab(tab.getAttribute("data-tab"));
+    });
+  });
+
+  // ── Hospital Profile & QR Tab ───────────────────────────────────────────
+
+  const loadHospitalTab = async () => {
+    let res = await api.getHospitalProfile();
+    if (!res.ok) {
+      const hList = await api.hospitals();
+      if (hList.ok && hList.data?.length) res = { ok: true, data: hList.data[0] };
     }
 
-    const qrWrapper = document.getElementById("admin-qrcode-canvas-wrapper");
-    const imgEl = qrWrapper ? qrWrapper.querySelector("img") : null;
-    const canvasEl = qrWrapper ? qrWrapper.querySelector("canvas") : null;
-    let qrSrc = "";
-    if (imgEl && imgEl.src) qrSrc = imgEl.src;
-    else if (canvasEl) qrSrc = canvasEl.toDataURL("image/png");
+    if (res.ok && res.data) {
+      currentHospital = res.data;
+      dashHospitalTitle.textContent = currentHospital.name;
+      dashHospitalSubtitle.textContent = `Coordinator: ${currentHospital.coordinator_name} (${currentHospital.coordinator_phone}) • Code: ${currentHospital.code}`;
 
-    printWin.document.write(`
+      // QR Elements
+      const qrImg = document.getElementById("hospital-qr-img");
+      const qrCode = document.getElementById("qr-h-code");
+      const qrName = document.getElementById("qr-h-name");
+      const btnDownload = document.getElementById("btn-download-qr");
+
+      const qrUrl = `/api/patient/hospital/${currentHospital.id}/qr`;
+      qrImg.src = qrUrl;
+      qrCode.textContent = currentHospital.code;
+      qrName.textContent = currentHospital.name;
+      btnDownload.href = qrUrl;
+      btnDownload.download = `${currentHospital.code}_CheckIn_QR.png`;
+
+      // Meta Elements
+      document.getElementById("card-h-name").textContent = currentHospital.name;
+      document.getElementById("card-h-code").textContent = currentHospital.code;
+      document.getElementById("card-h-loc").textContent = currentHospital.location;
+      document.getElementById("card-coord-name").textContent = currentHospital.coordinator_name;
+      document.getElementById("card-coord-phone").textContent = currentHospital.coordinator_phone;
+      document.getElementById("card-emerg-phone").textContent = currentHospital.emergency_phone || "Not set";
+
+      // Edit form initial values
+      document.getElementById("edit-h-name").value = currentHospital.name;
+      document.getElementById("edit-h-loc").value = currentHospital.location;
+      document.getElementById("edit-h-coord-name").value = currentHospital.coordinator_name;
+      document.getElementById("edit-h-coord-phone").value = currentHospital.coordinator_phone;
+      document.getElementById("edit-h-emerg-phone").value = currentHospital.emergency_phone || "";
+    }
+  };
+
+  // Edit hospital modal submit
+  document.getElementById("edit-hospital-form")?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById("btn-save-hospital");
+    setLoading(btn, true);
+
+    const payload = {
+      name: document.getElementById("edit-h-name").value.trim(),
+      location: document.getElementById("edit-h-loc").value.trim(),
+      coordinator_name: document.getElementById("edit-h-coord-name").value.trim(),
+      coordinator_phone: document.getElementById("edit-h-coord-phone").value.trim(),
+      emergency_phone: document.getElementById("edit-h-emerg-phone").value.trim() || null,
+    };
+
+    const res = await api.updateHospitalProfile(payload);
+    setLoading(btn, false);
+    if (!res.ok) {
+      shake(btn);
+      alert(res.error || "Failed to update hospital record");
+      return;
+    }
+    toast("Hospital record updated successfully!");
+    closeModal("edit-hospital");
+    loadHospitalTab();
+  });
+
+  // Print poster
+  document.getElementById("btn-print-poster")?.addEventListener("click", () => {
+    if (!currentHospital) return;
+    const printWindow = window.open("", "_blank");
+    printWindow.document.write(`
       <!DOCTYPE html>
       <html>
       <head>
-        <title>OPD Queue QR Poster — ${hospName}</title>
+        <title>Check-in Poster - ${currentHospital.name}</title>
         <style>
-          @page { size: A4 portrait; margin: 15mm; }
-          body {
-            font-family: 'Segoe UI', system-ui, sans-serif;
-            text-align: center;
-            color: #0f172a;
-            margin: 0;
-            padding: 24px;
-            background: #ffffff;
-          }
-          .poster-box {
-            border: 6px double #0284c7;
-            border-radius: 20px;
-            padding: 32px;
-            max-width: 650px;
-            margin: 0 auto;
-          }
-          .gov-badge {
-            font-size: 14px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            color: #0284c7;
-            margin-bottom: 8px;
-          }
-          h1 {
-            font-size: 32px;
-            font-weight: 900;
-            margin: 0 0 4px 0;
-            color: #0f172a;
-          }
-          .sub {
-            font-size: 16px;
-            color: #475569;
-            margin-bottom: 24px;
-          }
-          .qr-frame {
-            background: #ffffff;
-            border: 3px solid #0284c7;
-            padding: 20px;
-            display: inline-block;
-            border-radius: 16px;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.08);
-          }
-          .qr-frame img {
-            width: 260px;
-            height: 260px;
-            display: block;
-          }
-          .steps {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 16px;
-            margin: 32px 0 24px 0;
-            text-align: left;
-          }
-          .step-card {
-            background: #f8fafc;
-            border: 1px solid #e2e8f0;
-            border-radius: 12px;
-            padding: 12px;
-          }
-          .step-num {
-            display: inline-block;
-            background: #0284c7;
-            color: #ffffff;
-            width: 24px;
-            height: 24px;
-            line-height: 24px;
-            text-align: center;
-            border-radius: 50%;
-            font-weight: bold;
-            font-size: 12px;
-            margin-bottom: 6px;
-          }
-          .step-title {
-            font-weight: 700;
-            font-size: 14px;
-            margin-bottom: 4px;
-            color: #0f172a;
-          }
-          .step-desc {
-            font-size: 12px;
-            color: #64748b;
-          }
-          .footer {
-            font-size: 13px;
-            color: #64748b;
-            border-top: 1px solid #e2e8f0;
-            padding-top: 16px;
-          }
-          .tagline {
-            font-weight: 800;
-            color: #0284c7;
-          }
+          body { font-family: -apple-system, sans-serif; text-align: center; padding: 40px; margin: 0; }
+          .poster { border: 4px solid #0066cc; border-radius: 24px; padding: 48px; max-width: 600px; margin: 0 auto; }
+          h1 { font-size: 32px; margin: 0 0 8px; color: #111; }
+          p { font-size: 16px; color: #555; margin: 4px 0 24px; }
+          img { width: 280px; height: 280px; margin: 16px auto; display: block; }
+          .helpline { background: #f0fdf4; border: 2px solid #bbf7d0; border-radius: 12px; padding: 16px; margin-top: 24px; font-size: 18px; font-weight: bold; color: #166534; }
+          .instruction { font-size: 18px; font-weight: 600; color: #0066cc; margin-top: 16px; }
         </style>
       </head>
       <body>
-        <div class="poster-box">
-          <div class="gov-badge">PUBLIC HEALTH DEPARTMENT • OPD TOKEN SERVICE</div>
-          <h1>${hospName}</h1>
-          <div class="sub">बारी (Baari) — Digital Queue Management System</div>
-
-          <div class="qr-frame">
-            <img src="${qrSrc}" alt="Hospital OPD QR Code">
-          </div>
-
-          <div style="font-size:18px; font-weight:800; color:#0284c7; margin-top:16px;">
-            📱 स्कैन करें और अपनी बारी पाएं / Scan to Register Turn
-          </div>
-          <div style="font-size:13px; color:#64748b;">Code: <strong>${hospCode}</strong></div>
-
-          <div class="steps">
-            <div class="step-card">
-              <span class="step-num">1</span>
-              <div class="step-title">Scan QR Code</div>
-              <div class="step-desc">Open phone camera or QR scanner to open the page.</div>
-            </div>
-            <div class="step-card">
-              <span class="step-num">2</span>
-              <div class="step-title">Enter Details</div>
-              <div class="step-desc">Enter Name, Phone, and choose OPD department.</div>
-            </div>
-            <div class="step-card">
-              <span class="step-num">3</span>
-              <div class="step-title">Rest at Home</div>
-              <div class="step-desc">Get your live token, secret PIN, and arrive-by time.</div>
-            </div>
-          </div>
-
-          <div class="footer">
-            <span class="tagline">"Come at your time, not at 4 AM."</span> • Powered by Baari Open Source
-          </div>
+        <div class="poster">
+          <h1>${currentHospital.name}</h1>
+          <p>${currentHospital.location}</p>
+          <div class="instruction">Scan with camera to Get Your OPD Token</div>
+          <img src="/api/patient/hospital/${currentHospital.id}/qr" alt="QR Code">
+          <p style="font-size: 14px; color: #888;">AI Symptom Triage &bull; Live Queue Status &bull; Emergency Fast-Track</p>
+          <div class="helpline">Coordinator Helpline: ${currentHospital.coordinator_phone}</div>
         </div>
-        <script>
-          window.onload = function() {
-            setTimeout(function() { window.print(); }, 400);
-          };
-        </script>
+        <script>window.onload = function() { window.print(); };</script>
       </body>
       </html>
     `);
-    printWin.document.close();
-  },
-};
+    printWindow.document.close();
+  });
+
+  // Copy check-in link
+  document.getElementById("btn-copy-link")?.addEventListener("click", () => {
+    if (!currentHospital) return;
+    const link = `${location.origin}/token.html?hospital_id=${currentHospital.id}&code=${currentHospital.code}`;
+    copyText(link, "Patient check-in link copied!");
+  });
+
+  // ── Master Queues Console ────────────────────────────────────────────────
+
+  const renderQueueTable = () => {
+    const body = document.getElementById("master-queue-body");
+    const deptFilter = document.getElementById("filter-dept").value;
+    const prioFilter = document.getElementById("filter-priority").value;
+    const statusFilter = document.getElementById("filter-status").value;
+
+    body.replaceChildren();
+
+    const filtered = allTokensData.filter((t) => {
+      if (deptFilter !== "all" && String(t.department_id) !== deptFilter) return false;
+      if (prioFilter !== "all") {
+        if (prioFilter === "daily_life" && t.priority_class !== "daily_life" && t.priority_class !== "priority") return false;
+        if (prioFilter === "routine" && t.priority_class !== "routine" && t.priority_class !== "normal") return false;
+        if (prioFilter === "emergency" && t.priority_class !== "emergency") return false;
+      }
+      if (statusFilter === "waiting" && t.status !== "waiting") return false;
+      if (statusFilter === "called" && t.status !== "called") return false;
+      if (statusFilter === "done" && t.status !== "done") return false;
+      if (statusFilter === "all" && (t.status === "done" || t.status === "no_show") && prioFilter === "all") {
+        // default view focuses on active/waiting
+      }
+      return true;
+    });
+
+    if (!filtered.length) {
+      body.append(
+        el("tr", {}, [
+          el("td", { colspan: "8", style: "text-align:center;padding:36px;color:var(--text-muted)", text: "No patients currently match this filter." }),
+        ])
+      );
+      return;
+    }
+
+    filtered.forEach((t) => {
+      // Priority badge
+      const pClass = t.priority_class;
+      let badgeClass = "p-routine";
+      let badgeLabel = "Routine";
+      if (pClass === "emergency") {
+        badgeClass = "p-emergency";
+        badgeLabel = "🚨 Emergency";
+      } else if (pClass === "daily_life" || pClass === "priority") {
+        badgeClass = "p-daily";
+        badgeLabel = "⚡ Daily Urgent";
+      }
+
+      // Status chip
+      const statusChips = {
+        waiting: el("span", { class: "chip chip-waiting", text: "Waiting" }),
+        called: el("span", { class: "chip chip-doctor", text: "With Doctor" }),
+        done: el("span", { class: "chip chip-done", text: "Served" }),
+        no_show: el("span", { class: "chip chip-noshow", text: "No-Show" }),
+      };
+
+      // Actions
+      const actions = el("td", { class: "row-actions", style: "display:flex;gap:6px" });
+
+      if (t.status === "waiting") {
+        const btnCall = el("button", { class: "btn btn-sm btn-primary", type: "button", text: "Call" });
+        btnCall.addEventListener("click", async () => {
+          await api.callNext();
+          loadAllQueues();
+        });
+        actions.append(btnCall);
+      }
+
+      if (t.status === "called") {
+        const btnDone = el("button", { class: "btn btn-sm btn-secondary", type: "button", text: "Done" });
+        btnDone.addEventListener("click", async () => {
+          await api.markDone(t.token_id);
+          loadAllQueues();
+        });
+        const btnNoShow = el("button", { class: "btn btn-sm btn-tertiary", type: "button", text: "No-Show" });
+        btnNoShow.addEventListener("click", async () => {
+          await api.markNoShow(t.token_id);
+          loadAllQueues();
+        });
+        actions.append(btnDone, btnNoShow);
+      }
+
+      const btnEdit = el("button", { class: "btn btn-sm btn-tertiary", type: "button", text: "Edit" });
+      btnEdit.addEventListener("click", () => {
+        openEditTokenModal(t);
+      });
+      actions.append(btnEdit);
+
+      const arrivedStr = t.created_at ? new Date(t.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "—";
+
+      body.append(
+        el("tr", {}, [
+          el("td", { style: "font-weight:700", text: t.token_number }),
+          el("td", { text: t.patient_name }),
+          el("td", {}, [el("span", { class: `priority-badge-sm ${badgeClass}`, text: badgeLabel })]),
+          el("td", { text: t.department_name }),
+          el("td", { class: "caption", style: "max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap", text: t.symptoms || t.priority_reason || "—" }),
+          el("td", {}, [statusChips[t.status] || el("span", { text: t.status })]),
+          el("td", { class: "num caption", text: arrivedStr }),
+          actions,
+        ])
+      );
+    });
+  };
+
+  const loadAllQueues = async () => {
+    const res = await api.allHospitalQueues();
+    if (!res.ok) return;
+
+    const data = res.data;
+    allTokensData = data.tokens || [];
+
+    // Update KPI counters
+    updateCount(document.getElementById("kpi-waiting"), data.waiting_count || 0);
+    updateCount(document.getElementById("kpi-emergency"), data.emergency_count || 0);
+    updateCount(document.getElementById("kpi-daily"), data.daily_life_count || 0);
+    updateCount(document.getElementById("kpi-routine"), data.routine_count || 0);
+    updateCount(document.getElementById("kpi-done"), data.done_count || 0);
+
+    renderQueueTable();
+  };
+
+  // Filter change listeners
+  document.getElementById("filter-dept")?.addEventListener("change", renderQueueTable);
+  document.getElementById("filter-priority")?.addEventListener("change", renderQueueTable);
+  document.getElementById("filter-status")?.addEventListener("change", renderQueueTable);
+
+  // Global Call Next button
+  document.getElementById("btn-call-next-global")?.addEventListener("click", async () => {
+    const res = await api.callNext();
+    if (res.ok) {
+      toast(`Called ${res.data.token_number} (${res.data.patient_name})`);
+      loadAllQueues();
+    } else {
+      toast(res.error || "No patients currently waiting");
+    }
+  });
+
+  // Edit Token Modal
+  const openEditTokenModal = (token) => {
+    document.getElementById("edit-token-id").value = token.token_id;
+    document.getElementById("edit-token-patient").value = token.patient_name;
+    document.getElementById("edit-token-priority").value = token.priority_class;
+    document.getElementById("edit-token-reason").value = token.symptoms || token.priority_reason || "";
+    document.getElementById("edit-token-dept").value = String(token.department_id);
+    document.getElementById("edit-token-status").value = token.status;
+    document.getElementById("edit-token-title").textContent = `Edit ${token.token_number}`;
+    openModal("edit-token");
+  };
+
+  document.getElementById("edit-token-form")?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById("btn-save-token");
+    setLoading(btn, true);
+
+    const tokenId = document.getElementById("edit-token-id").value;
+    const payload = {
+      patient_name: document.getElementById("edit-token-patient").value.trim(),
+      priority_class: document.getElementById("edit-token-priority").value,
+      priority_reason: document.getElementById("edit-token-reason").value.trim(),
+      symptoms: document.getElementById("edit-token-reason").value.trim(),
+      department_id: Number(document.getElementById("edit-token-dept").value),
+      status: document.getElementById("edit-token-status").value,
+    };
+
+    const res = await api.editToken(tokenId, payload);
+    setLoading(btn, false);
+    if (!res.ok) {
+      shake(btn);
+      alert(res.error || "Failed to update token");
+      return;
+    }
+    toast("Queue token updated!");
+    closeModal("edit-token");
+    loadAllQueues();
+  });
+
+  // Walk-in form submit
+  document.getElementById("walkin-form")?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById("walkin-submit");
+    setLoading(btn, true);
+
+    const payload = {
+      name: document.getElementById("walkin-name").value.trim(),
+      phone: document.getElementById("walkin-phone").value.trim() || null,
+      department_id: Number(document.getElementById("walkin-dept").value),
+      priority_class: document.getElementById("walkin-priority").value,
+      priority_reason: document.getElementById("walkin-reason").value.trim() || null,
+      symptoms: document.getElementById("walkin-reason").value.trim() || null,
+    };
+
+    const res = await api.issueWalkIn(payload);
+    setLoading(btn, false);
+    if (!res.ok) {
+      shake(btn);
+      alert(res.error || "Failed to issue walk-in token");
+      return;
+    }
+    toast(`Walk-in Token Issued: ${res.data.token_number}`);
+    closeModal("walkin");
+    document.getElementById("walkin-form").reset();
+    loadAllQueues();
+  });
+
+  // ── Existing Departments, Users, and Analytics Logic ───────────────────
+
+  const fillDeptSelects = () => {
+    ["new-dept", "doctor-dept", "filter-dept", "edit-token-dept", "walkin-dept"].forEach((id) => {
+      const sel = document.getElementById(id);
+      if (!sel) return;
+      const keepFirst = id === "filter-dept";
+      sel.innerHTML = keepFirst ? '<option value="all">All Departments</option>' : "";
+      departments.forEach((d) => sel.append(el("option", { value: String(d.id), text: d.name })));
+    });
+  };
+
+  const loadDepartments = async () => {
+    const [dRes, docRes] = await Promise.all([api.adminDepartments(), api.adminDoctors()]);
+    departments = dRes.data || [];
+    fillDeptSelects();
+
+    const deptBody = document.getElementById("depts-body");
+    if (deptBody) {
+      deptBody.replaceChildren();
+      departments.forEach((d) => {
+        deptBody.append(
+          el("tr", {}, [
+            el("td", { text: d.name }),
+            el("td", { class: "num", text: d.code }),
+            el("td", { class: "num", text: String(d.avg_service_minutes) }),
+          ])
+        );
+      });
+    }
+  };
+
+  const loadOverview = async () => {
+    const res = await api.summary();
+    const skel = document.getElementById("overview-skel");
+    if (skel) skel.hidden = true;
+    if (!res.ok) return;
+    const s = res.data;
+    updateCount(document.getElementById("kpi-served"), s.patients_served);
+    updateCount(document.getElementById("kpi-wait"), s.average_wait_minutes);
+    updateCount(document.getElementById("kpi-noshow"), s.no_show_count);
+    document.getElementById("kpi-peak").textContent = s.peak_hour;
+    const svg = document.getElementById("overview-chart");
+    const labels = ["08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00"];
+    svgLineChart(svg, [{ name: "Patients", values: s.hourly }], { alt: "Hourly patients served" });
+    bindChartHover(svg, document.getElementById("overview-tip"), labels, [{ name: "Patients", values: s.hourly }]);
+  };
+
+  const loadUsers = async () => {
+    const res = await api.adminUsers();
+    const body = document.getElementById("users-body");
+    if (!body) return;
+    body.replaceChildren();
+    (res.data || []).forEach((row) => {
+      const actions = el("td", { class: "row-actions" });
+      const toggle = el("button", { class: "btn btn-sm btn-secondary", type: "button" }, [
+        row.active ? t("admin.disable") : t("admin.enable"),
+      ]);
+      toggle.addEventListener("click", async () => {
+        await api.toggleUser(row.id);
+        loadUsers();
+      });
+      actions.append(toggle);
+      body.append(
+        el("tr", {}, [
+          el("td", { text: row.username }),
+          el("td", { text: row.role }),
+          el("td", { text: row.department_name || "—" }),
+          el("td", {}, [
+            el("span", { class: `chip ${row.active ? "chip-done" : "chip-noshow"}`, text: row.active ? "Active" : "Disabled" }),
+          ]),
+          actions,
+        ])
+      );
+    });
+  };
+
+  const loadAudit = async () => {
+    const res = await api.auditLog({ page: 1, per_page: 20 });
+    const body = document.getElementById("audit-body");
+    if (!body) return;
+    body.replaceChildren();
+    (res.data?.items || []).forEach((row) => {
+      body.append(
+        el("tr", {}, [
+          el("td", { class: "caption", text: formatDate(row.timestamp) }),
+          el("td", { text: row.actor_username || "system" }),
+          el("td", { text: row.actor_role }),
+          el("td", { text: row.action }),
+          el("td", { text: row.details || "—" }),
+        ])
+      );
+    });
+  };
+
+  // Initial load
+  await loadDepartments();
+  await loadHospitalTab();
+  await loadAllQueues();
+
+  // Auto-refresh master queues every 4 seconds
+  window.setInterval(() => {
+    const qPanel = document.querySelector("[data-tab-panel='queues']");
+    if (qPanel && !qPanel.hidden) {
+      loadAllQueues();
+    }
+  }, 4000);
+}
+
+document.addEventListener("DOMContentLoaded", boot);

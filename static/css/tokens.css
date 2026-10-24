@@ -1,0 +1,149 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Devanagari:wght@400;500;600;700&display=swap");
+
+:root {
+  color-scheme: light;
+  --bg: #fbfbfd;
+  --surface: #ffffff;
+  --surface-2: #f5f5f7;
+  --text: #1d1d1f;
+  --text-2: #6e6e73;
+  --text-3: #86868b;
+  --line: rgba(0, 0, 0, 0.08);
+  --accent: #0071e3;
+  --accent-hover: #0077ed;
+  --on-accent: #ffffff;
+  --success: #1d9b4f;
+  --warning: #b86e00;
+  --danger: #d70015;
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 16px rgba(0, 0, 0, 0.06);
+  --shadow-2: 0 8px 30px rgba(0, 0, 0, 0.1);
+  --shadow-inner: 0 0 0 0 transparent;
+  --glass: color-mix(in srgb, var(--surface) 78%, transparent);
+  --glass-blur: saturate(180%) blur(20px);
+  --surface-1: var(--surface);
+  --text-primary: var(--text);
+  --text-secondary: var(--text-2);
+  --text-muted: var(--text-2);
+  --border-subtle: var(--line);
+  --primary: var(--accent);
+  --logo-plate: #ffffff;
+  --page-bg: url("../assets/bg-light.jpg"), url("../assets/bg-dawn.svg");
+  --page-overlay: color-mix(in srgb, var(--bg) 42%, transparent);
+  --radius-sm: 12px;
+  --radius-md: 20px;
+  --radius-lg: 28px;
+  --radius-pill: 999px;
+  --space-1: 8px;
+  --space-2: 16px;
+  --space-3: 24px;
+  --space-4: 32px;
+  --space-5: 40px;
+  --space-6: 48px;
+  --space-7: 64px;
+  --space-8: 80px;
+  --space-9: 96px;
+  --control-sm: 44px;
+  --control-md: 48px;
+  --control-lg: 52px;
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", Inter,
+    "Segoe UI", "Noto Sans Devanagari", Roboto, sans-serif;
+  --display: clamp(3.5rem, 6vw + 1.5rem, 5rem);
+  --title-1: 2.5rem;
+  --title-2: 1.75rem;
+  --headline: 1.25rem;
+  --body: 1.0625rem;
+  --callout: 0.9375rem;
+  --caption: 0.8125rem;
+  --leading-display: 1.05;
+  --leading-body: 1.5;
+  --tracking-display: -0.03em;
+  --content: 65ch;
+  --page: 1120px;
+  --page-wide: 1280px;
+  --z-nav: 100;
+  --z-sheet: 200;
+  --z-modal: 300;
+  --z-toast: 400;
+  --z-tooltip: 500;
+  --theme-duration: 300ms;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #0a0a0c;
+    --surface: #1c1c1e;
+    --surface-2: #2c2c2e;
+    --text: #f5f5f7;
+    --text-2: #aeaeb2;
+    --text-3: #86868b;
+    --line: rgba(255, 255, 255, 0.14);
+    --accent: #2997ff;
+    --accent-hover: #409cff;
+    --on-accent: #ffffff;
+    --success: #30d158;
+    --warning: #ffd60a;
+    --danger: #ff453a;
+    --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.5), 0 4px 16px rgba(0, 0, 0, 0.35),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+    --shadow-2: 0 8px 30px rgba(0, 0, 0, 0.55), inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+    --shadow-inner: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+    --glass: color-mix(in srgb, var(--surface) 80%, transparent);
+    --logo-plate: #2c2c2e;
+    --page-bg: url("../assets/bg-dark.jpg"), url("../assets/bg-dusk.svg");
+    --page-overlay: color-mix(in srgb, var(--bg) 55%, transparent);
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0a0a0c;
+  --surface: #1c1c1e;
+  --surface-2: #2c2c2e;
+  --text: #f5f5f7;
+  --text-2: #aeaeb2;
+  --text-3: #86868b;
+  --line: rgba(255, 255, 255, 0.14);
+  --accent: #2997ff;
+  --accent-hover: #409cff;
+  --on-accent: #ffffff;
+  --success: #30d158;
+  --warning: #ffd60a;
+  --danger: #ff453a;
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.5), 0 4px 16px rgba(0, 0, 0, 0.35),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  --shadow-2: 0 8px 30px rgba(0, 0, 0, 0.55), inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+  --shadow-inner: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  --glass: color-mix(in srgb, var(--surface) 80%, transparent);
+  --logo-plate: #2c2c2e;
+  --page-bg: url("../assets/bg-dark.jpg"), url("../assets/bg-dusk.svg");
+  --page-overlay: color-mix(in srgb, var(--bg) 55%, transparent);
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg: #fbfbfd;
+  --surface: #ffffff;
+  --surface-2: #f5f5f7;
+  --text: #1d1d1f;
+  --text-2: #6e6e73;
+  --text-3: #86868b;
+  --line: rgba(0, 0, 0, 0.08);
+  --accent: #0071e3;
+  --accent-hover: #0077ed;
+  --on-accent: #ffffff;
+  --success: #1d9b4f;
+  --warning: #b86e00;
+  --danger: #d70015;
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 16px rgba(0, 0, 0, 0.06);
+  --shadow-2: 0 8px 30px rgba(0, 0, 0, 0.1);
+  --shadow-inner: 0 0 0 0 transparent;
+  --page-bg: url("../assets/bg-light.jpg"), url("../assets/bg-dawn.svg");
+  --page-overlay: color-mix(in srgb, var(--bg) 42%, transparent);
+}
+
+.glass {
+  background: var(--glass);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+}

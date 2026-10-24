@@ -13,26 +13,39 @@ from app.config import settings
 
 
 # Priority weights for sorting: lowest number = highest priority
+# 1) Emergency (0) - Critical conditions, severe accidents, trauma
+# 2) Daily life problem / Urgent (1) - High fever, acute pain, sprains, distress
+# 3) Routine (2) - Standard OPD, regular follow-up, general consultations
 PRIORITY_ORDER = {
     "emergency": 0,
-    "priority": 1,
-    "normal": 2,
+    "daily_life": 1,
+    "priority": 1,  # legacy alias
+    "routine": 2,
+    "normal": 2,    # legacy alias
 }
+
+
+def display_dept_code(dept_code: str) -> str:
+    """Public token prefix: 'G_12' and 'G' both display as 'G'."""
+    return str(dept_code or "").split("_", 1)[0].upper()
 
 
 def format_token_number(dept_code: str, number: int) -> str:
     """Format token number as e.g. 'G-07'."""
-    return f"{dept_code.upper()}-{number:02d}"
+    return f"{display_dept_code(dept_code)}-{number:02d}"
 
 
 def parse_token_number(token_str: str) -> Tuple[Optional[str], Optional[int]]:
-    """Parse 'G-07' or 'g-7' into ('G', 7). Returns (None, None) if invalid."""
+    """Parse 'G-07', 'g-7', or 'G_12-07' into ('G', 7). Returns (None, None) if invalid."""
     try:
-        parts = token_str.strip().split("-")
-        if len(parts) != 2:
+        raw = token_str.strip().upper()
+        if "-" not in raw:
             return None, None
-        code = parts[0].strip().upper()
-        num = int(parts[1].strip())
+        code, num_part = raw.rsplit("-", 1)
+        code = display_dept_code(code)
+        num = int(num_part.strip())
+        if not code:
+            return None, None
         return code, num
     except Exception:
         return None, None

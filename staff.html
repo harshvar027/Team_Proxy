@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#fbfbfd">
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#000000">
+  <title>Live queue · Baari</title>
+  <link rel="icon" type="image/png" href="assets/favicon.png">
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/motion.css">
+  <link rel="stylesheet" href="css/pages.css">
+  <script type="module" src="js/theme.js"></script>
+  <script type="module" src="js/i18n.js"></script>
+  <script type="module" src="js/motion.js"></script>
+  <script type="module" src="js/ui.js"></script>
+  <script type="module" src="js/staff.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main" data-i18n="skip">Skip to content</a>
+  <div class="offline-banner" id="offline-banner" hidden data-i18n="errors.offline">You’re offline. We’ll keep trying.</div>
+  <header class="nav" data-nav>
+    <div class="nav-inner">
+      <a class="nav-brand" href="index.html">
+        <img class="brand-logo" src="assets/logo.png" alt="Baari" width="44" height="44">
+        <span data-i18n="brand">Baari</span>
+      </a>
+      <nav class="nav-links" aria-label="Primary">
+        <a class="nav-link is-active" href="staff.html" data-i18n="nav.staff">Staff</a>
+        <a class="nav-link" href="admin.html" data-i18n="nav.admin">Admin</a>
+      </nav>
+      <div class="nav-actions">
+        <button class="btn btn-icon sidebar-toggle" type="button" data-sidebar-toggle data-i18n-aria="common.menu">
+          <svg class="icon" aria-hidden="true"><use href="assets/icons.svg#menu"></use></svg>
+        </button>
+        <div class="lang-switch" role="group" data-i18n-aria="nav.language">
+          <button type="button" data-lang-btn="en">EN</button>
+          <button type="button" data-lang-btn="hi">हि</button>
+          <button type="button" data-lang-btn="mr">मर</button>
+        </div>
+        <button class="theme-toggle" type="button" data-theme-toggle data-i18n-aria="nav.toggleTheme">
+          <svg class="icon" aria-hidden="true"><use href="assets/icons.svg#sun"></use></svg>
+        </button>
+        <div data-auth-slot></div>
+      </div>
+    </div>
+  </header>
+  <div class="sidebar-scrim" data-sidebar-scrim></div>
+  <div class="dash">
+    <aside class="sidebar" data-sidebar>
+      <p class="caption" id="dept-label"></p>
+      <a class="sidebar-link is-active" href="#queue">
+        <svg class="icon" aria-hidden="true"><use href="assets/icons.svg#ticket"></use></svg>
+        <span data-i18n="staff.title">Live queue</span>
+      </a>
+      <a class="sidebar-link" href="#doctors">
+        <svg class="icon" aria-hidden="true"><use href="assets/icons.svg#stethoscope"></use></svg>
+        <span data-i18n="staff.doctors">Doctors on duty</span>
+      </a>
+      <a class="sidebar-link" href="#audit">
+        <svg class="icon" aria-hidden="true"><use href="assets/icons.svg#clipboard"></use></svg>
+        <span data-i18n="staff.audit">Audit log</span>
+      </a>
+    </aside>
+    <main id="main" class="dash-main">
+      <header class="page-header">
+        <div>
+          <h1 class="title-1" data-i18n="staff.title">Live queue</h1>
+          <p data-i18n="staff.desc">Call the next person, then keep the line moving.</p>
+        </div>
+        <div class="cluster">
+          <button class="btn btn-secondary" type="button" data-open-modal="walkin" data-i18n="staff.walkIn">Issue token for walk-in</button>
+          <button class="btn btn-primary" type="button" id="call-next">
+            <span class="btn-label" data-i18n="staff.callNext">Call next</span>
+            <span class="spinner" aria-hidden="true"></span>
+          </button>
+        </div>
+      </header>
+      <div class="banner banner-warning" id="rising" hidden>
+        <svg class="icon" aria-hidden="true"><use href="assets/icons.svg#alert"></use></svg>
+        <span data-i18n="staff.rising">Waits are rising. Consider opening another counter.</span>
+      </div>
+      <section class="stats" id="queue">
+        <article class="stat-tile">
+          <span class="stat-label" data-i18n="staff.waiting">Waiting</span>
+          <span class="stat-value" id="stat-waiting" data-count="0">0</span>
+        </article>
+        <article class="stat-tile">
+          <span class="stat-label" data-i18n="staff.withDoctor">With doctor</span>
+          <span class="stat-value" id="stat-called" data-count="0">0</span>
+        </article>
+        <article class="stat-tile">
+          <span class="stat-label" data-i18n="staff.served">Served</span>
+          <span class="stat-value" id="stat-done" data-count="0">0</span>
+        </article>
+        <article class="stat-tile">
+          <span class="stat-label" data-i18n="staff.avgWait">Average wait</span>
+          <span class="stat-value" id="stat-wait" data-count="0" data-suffix=" min">0</span>
+        </article>
+      </section>
+      <div class="table-wrap" id="queue-skel">
+        <div class="skeleton" style="height:280px;border-radius:20px"></div>
+      </div>
+      <div class="table-wrap" id="queue-table-wrap" hidden>
+        <table class="table">
+          <thead>
+            <tr>
+              <th data-i18n="staff.token">Token</th>
+              <th data-i18n="staff.name">Name</th>
+              <th data-i18n="staff.priority">Priority</th>
+              <th data-i18n="staff.status">Status</th>
+              <th data-i18n="staff.actions">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="queue-body"></tbody>
+        </table>
+      </div>
+      <div id="queue-empty" hidden></div>
+      <section id="doctors" class="card">
+        <div class="spread">
+          <h2 class="headline" data-i18n="staff.doctors">Doctors on duty</h2>
+          <div class="stepper">
+            <button class="stepper-btn" type="button" id="doc-minus" aria-label="Fewer doctors">
+              <svg class="icon" aria-hidden="true"><use href="assets/icons.svg#minus"></use></svg>
+            </button>
+            <span class="stepper-val num" id="doc-count">0</span>
+            <button class="stepper-btn" type="button" id="doc-plus" aria-label="More doctors">
+              <svg class="icon" aria-hidden="true"><use href="assets/icons.svg#plus"></use></svg>
+            </button>
+          </div>
+        </div>
+        <div id="doctor-list" class="stack"></div>
+      </section>
+      <section id="audit" class="card">
+        <button class="btn btn-tertiary" type="button" id="audit-toggle" aria-expanded="false" data-i18n="staff.audit">Audit log</button>
+        <div class="audit-panel" id="audit-panel" hidden>
+          <div class="table-wrap">
+            <table class="table">
+              <tbody id="audit-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="modal-backdrop" data-modal="walkin" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="walkin-title" tabindex="-1">
+      <div class="modal-header">
+        <h2 class="headline" id="walkin-title" data-i18n="staff.walkIn">Issue token for walk-in</h2>
+        <button class="btn btn-icon" type="button" data-close-modal="walkin" data-i18n-aria="common.close">
+          <svg class="icon" aria-hidden="true"><use href="assets/icons.svg#x"></use></svg>
+        </button>
+      </div>
+      <form id="walkin-form" class="stack">
+        <div class="field">
+          <div class="field-control">
+            <input class="field-input" id="walkin-name" autocomplete="name" placeholder=" " required>
+            <label class="field-label" for="walkin-name" data-i18n="wizard.name">Full name</label>
+          </div>
+        </div>
+        <button class="btn btn-primary btn-lg" type="submit" id="walkin-submit">
+          <span class="btn-label" data-i18n="common.confirm">Confirm</span>
+          <span class="spinner" aria-hidden="true"></span>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" data-modal="priority" hidden>
+    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="priority-title" tabindex="-1">
+      <div class="sheet-handle"></div>
+      <div class="modal-header">
+        <h2 class="headline" id="priority-title" data-i18n="staff.setPriority">Set priority</h2>
+        <button class="btn btn-icon" type="button" data-close-modal="priority" data-i18n-aria="common.close">
+          <svg class="icon" aria-hidden="true"><use href="assets/icons.svg#x"></use></svg>
+        </button>
+      </div>
+      <form id="priority-form" class="stack">
+        <div class="segmented" role="radiogroup">
+          <button class="segmented-btn is-active" type="button" data-priority="normal">Normal</button>
+          <button class="segmented-btn" type="button" data-priority="priority">Priority</button>
+          <button class="segmented-btn" type="button" data-priority="emergency">Emergency</button>
+        </div>
+        <div class="field">
+          <label class="caption" for="priority-reason" data-i18n="staff.reason">Reason</label>
+          <textarea class="textarea" id="priority-reason" required></textarea>
+          <p class="field-message" id="reason-message" data-i18n="staff.reasonHelp">A reason is required.</p>
+        </div>
+        <button class="btn btn-primary btn-lg" type="submit" id="priority-submit">
+          <span class="btn-label" data-i18n="common.save">Save</span>
+          <span class="spinner" aria-hidden="true"></span>
+        </button>
+      </form>
+    </div>
+  </div>
+</body>
+</html>

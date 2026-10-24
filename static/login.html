@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#fbfbfd">
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0a0a0c">
+  <title>Portal Sign In & Registration · Baari</title>
+  <link rel="icon" type="image/png" href="assets/favicon.png">
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/motion.css">
+  <link rel="stylesheet" href="css/pages.css">
+  <script src="assets/vendor/jsqr.min.js"></script>
+  <script type="module" src="js/theme.js"></script>
+  <script type="module" src="js/i18n.js"></script>
+  <script type="module" src="js/motion.js"></script>
+  <script type="module" src="js/login.js"></script>
+  <style>
+    /* Login page full scrollable */
+    html, body {
+      height: auto;
+      min-height: 100%;
+      overflow-y: auto !important;
+    }
+
+    .role-toggle {
+      display: flex;
+      background: color-mix(in srgb, var(--surface-2) 65%, transparent);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-radius: var(--radius-pill);
+      padding: 5px;
+      gap: 4px;
+      margin-bottom: 20px;
+      border: 1px solid color-mix(in srgb, var(--line) 50%, transparent);
+    }
+    .role-tab {
+      flex: 1;
+      padding: 9px 12px;
+      font-size: 13px;
+      font-weight: 600;
+      border: none;
+      border-radius: var(--radius-pill);
+      background: transparent;
+      color: var(--text-2);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .role-tab.is-active {
+      background: var(--surface);
+      color: var(--accent);
+      box-shadow: var(--shadow-1);
+    }
+    .auth-mode-switch {
+      display: flex;
+      justify-content: center;
+      gap: 4px;
+      margin-bottom: 20px;
+      padding: 5px;
+      background: color-mix(in srgb, var(--surface-2) 65%, transparent);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-radius: var(--radius-pill);
+      border: 1px solid color-mix(in srgb, var(--line) 50%, transparent);
+    }
+    .mode-btn {
+      flex: 1;
+      background: transparent;
+      border: none;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-2);
+      cursor: pointer;
+      padding: 8px 12px;
+      border-radius: var(--radius-pill);
+      transition: all 0.2s ease;
+    }
+    .mode-btn.is-active {
+      background: var(--surface);
+      color: var(--accent);
+      font-weight: 600;
+      box-shadow: var(--shadow-1);
+    }
+    .hospital-fields, .patient-fields {
+      animation: fadeIn 0.25s ease-out;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    /* Animated entrance for login card */
+    @keyframes slide-up {
+      from { opacity: 0; transform: translateY(28px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .login-card {
+      animation: slide-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+    /* Trust badges row */
+    .login-trust-row {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 8px;
+      margin: 8px 0 16px;
+    }
+    .login-trust-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: color-mix(in srgb, var(--surface-2) 55%, transparent);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid color-mix(in srgb, var(--line) 50%, transparent);
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-2);
+    }
+    /* QR section divider */
+    .or-divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 4px 0;
+      color: var(--text-3);
+      font-size: 12px;
+      font-weight: 500;
+    }
+    .or-divider::before,
+    .or-divider::after {
+      content: "";
+      flex: 1;
+      height: 1px;
+      background: var(--line);
+    }
+    /* Feature highlight boxes */
+    .login-features {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin: 20px 0;
+    }
+    .login-feature-box {
+      padding: 16px;
+      background: color-mix(in srgb, var(--surface-2) 55%, transparent);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border-radius: 16px;
+      border: 1px solid color-mix(in srgb, var(--line) 50%, transparent);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .login-feature-box:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+    }
+    .login-feature-box .icon-big {
+      font-size: 24px;
+      margin-bottom: 4px;
+    }
+    .login-feature-box strong {
+      font-size: 13px;
+      color: var(--text);
+    }
+    .login-feature-box span {
+      font-size: 11.5px;
+      color: var(--text-2);
+      line-height: 1.4;
+    }
+    /* Scrollable registration forms */
+    #hospital-reg-fields,
+    #patient-reg-fields {
+      overflow: visible;
+    }
+  </style>
+</head>
+<body class="login-page">
+  <a class="skip-link" href="#login-card" data-i18n="skip">Skip to content</a>
+  <div class="login-blobs" aria-hidden="true">
+    <div class="blob login-blob-1"></div>
+    <div class="blob login-blob-2"></div>
+  </div>
+
+  <div class="login-toolbar">
+    <a href="index.html" class="nav-brand" style="font-size:14px;gap:8px;text-decoration:none">
+      <img src="assets/logo.png" alt="Baari" width="32" height="32" style="width:32px;height:32px;border-radius:9px;background:var(--surface);padding:2px;box-shadow:var(--shadow-1)">
+      <span style="font-weight:700;color:var(--text)">Baari</span>
+    </a>
+    <div style="display:flex;align-items:center;gap:8px">
+      <div class="lang-switch" role="group" data-i18n-aria="nav.language">
+        <button type="button" data-lang-btn="en">EN</button>
+        <button type="button" data-lang-btn="hi">हि</button>
+        <button type="button" data-lang-btn="mr">मर</button>
+      </div>
+      <button class="theme-toggle" type="button" data-theme-toggle data-i18n-aria="nav.toggleTheme">
+        <svg class="icon" aria-hidden="true"><use href="assets/icons.svg#sun"></use></svg>
+      </button>
+    </div>
+  </div>
+
+  <main id="login-card" class="login-card" data-enter>
+    <div class="login-header">
+      <img class="brand-logo brand-logo-lg" src="assets/logo.png" alt="Baari Healthcare">
+      <p class="caption" style="font-weight:700;color:var(--text-2);margin:2px 0 0" data-i18n="brand">Baari Healthcare</p>
+      <h1 class="title-1" id="portal-title">Sign in</h1>
+      <p class="muted" id="portal-subtitle" style="font-size:14px">Choose your portal to proceed.</p>
+    </div>
+
+    <!-- Trust badges -->
+    <div class="login-trust-row">
+      <span class="login-trust-badge">🔒 Secure</span>
+      <span class="login-trust-badge">🏥 Multi-Hospital</span>
+      <span class="login-trust-badge">⚡ AI Triage</span>
+      <span class="login-trust-badge">📱 QR Check-in</span>
+    </div>
+
+    <!-- QR Scan Section (Sign-in shortcut) -->
+    <div class="qr-scan-card" id="login-qr-card">
+      <div class="spread" style="align-items:center">
+        <div>
+          <h2 class="headline" style="margin:0;font-size:15px">📷 Scan Hospital QR</h2>
+          <p class="caption" style="margin:4px 0 0">Skip the form — scan the clinic poster QR code to open check-in directly.</p>
+        </div>
+        <div class="qr-scan-actions">
+          <button class="btn btn-primary btn-sm" type="button" id="btn-scan-qr">
+            📷 Start camera
+          </button>
+          <button class="btn btn-secondary btn-sm" type="button" id="btn-stop-scan" hidden>Stop</button>
+          <label class="btn btn-secondary btn-sm" for="qr-file-input">Upload image</label>
+          <input id="qr-file-input" type="file" accept="image/*" capture="environment" hidden>
+        </div>
+      </div>
+      <p class="caption" id="qr-scan-status" style="color:var(--text-3)">Camera stays on this device. We only read the hospital id from the poster.</p>
+      <div class="qr-video-wrap" id="qr-video-wrap" hidden>
+        <video id="qr-video" autoplay playsinline muted></video>
+        <canvas id="qr-canvas"></canvas>
+        <div class="qr-frame" aria-hidden="true"></div>
+      </div>
+    </div>
+
+    <div class="or-divider">or sign in with your account</div>
+
+    <!-- 2 Types: Normal User / Patient vs Hospital -->
+    <div class="role-toggle" role="tablist" aria-label="Account type">
+      <button type="button" class="role-tab is-active" id="tab-patient" role="tab" aria-selected="true">
+        <svg class="icon" aria-hidden="true" style="width:15px;height:15px"><use href="assets/icons.svg#user"></use></svg>
+        <span>Patient / User</span>
+      </button>
+      <button type="button" class="role-tab" id="tab-hospital" role="tab" aria-selected="false">
+        <svg class="icon" aria-hidden="true" style="width:15px;height:15px"><use href="assets/icons.svg#stethoscope"></use></svg>
+        <span>Hospital / Clinic</span>
+      </button>
+    </div>
+
+    <!-- Mode Switcher: Sign In vs Register -->
+    <div class="auth-mode-switch">
+      <button type="button" class="mode-btn is-active" id="mode-signin">Sign In</button>
+      <button type="button" class="mode-btn" id="mode-register">New Registration</button>
+    </div>
+
+    <form class="login-form" id="login-form" novalidate>
+      <!-- Common: Username -->
+      <div class="field" data-field="username">
+        <div class="field-control">
+          <input class="field-input" id="username" name="username" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder=" " required>
+          <label class="field-label" for="username" id="label-username">Username or Mobile</label>
+        </div>
+        <p class="field-message"></p>
+      </div>
+
+      <!-- Register Patient: Full Name & Phone -->
+      <div class="patient-fields" id="patient-reg-fields" hidden>
+        <div class="field" data-field="fullname">
+          <div class="field-control">
+            <input class="field-input" id="patient-name" name="fullname" type="text" placeholder=" ">
+            <label class="field-label" for="patient-name">Patient Full Name</label>
+          </div>
+          <p class="field-message"></p>
+        </div>
+        <div class="field" data-field="phone">
+          <div class="field-control">
+            <input class="field-input" id="patient-phone" name="phone" type="tel" placeholder=" ">
+            <label class="field-label" for="patient-phone">Contact Mobile Number</label>
+          </div>
+          <p class="field-message"></p>
+        </div>
+      </div>
+
+      <!-- Register Hospital: Hospital Details & Coordinator info -->
+      <div class="hospital-fields" id="hospital-reg-fields" hidden>
+        <div class="field" data-field="hospital_name">
+          <div class="field-control">
+            <input class="field-input" id="hospital-name" name="hospital_name" type="text" placeholder=" ">
+            <label class="field-label" for="hospital-name">Hospital / Clinic Name</label>
+          </div>
+          <p class="field-message"></p>
+        </div>
+        <div class="field" data-field="location">
+          <div class="field-control">
+            <input class="field-input" id="hospital-location" name="location" type="text" placeholder=" ">
+            <label class="field-label" for="hospital-location">Hospital Location / City Address</label>
+          </div>
+          <p class="field-message"></p>
+        </div>
+        <div class="field" data-field="coordinator_name">
+          <div class="field-control">
+            <input class="field-input" id="coord-name" name="coordinator_name" type="text" placeholder=" ">
+            <label class="field-label" for="coord-name">Head Coordinator Name</label>
+          </div>
+          <p class="field-message"></p>
+        </div>
+        <div class="field" data-field="coordinator_phone">
+          <div class="field-control">
+            <input class="field-input" id="coord-phone" name="coordinator_phone" type="tel" placeholder=" ">
+            <label class="field-label" for="coord-phone">Coordinator Contact (Patient Helpline)</label>
+          </div>
+          <p class="field-message"></p>
+        </div>
+        <div class="field" data-field="emergency_phone">
+          <div class="field-control">
+            <input class="field-input" id="emerg-phone" name="emergency_phone" type="tel" placeholder=" ">
+            <label class="field-label" for="emerg-phone">24/7 Emergency Hotline (Optional)</label>
+          </div>
+          <p class="field-message"></p>
+        </div>
+      </div>
+
+      <!-- Password -->
+      <div class="field" data-field="password">
+        <div class="field-control">
+          <input class="field-input" id="password" name="password" type="password" autocomplete="current-password" placeholder=" " required>
+          <label class="field-label" for="password" data-i18n="login.password">Password</label>
+          <button class="field-action" type="button" id="toggle-password" aria-pressed="false" data-i18n-aria="login.show">
+            <svg class="icon" aria-hidden="true"><use href="assets/icons.svg#eye"></use></svg>
+          </button>
+        </div>
+        <p class="caps-warning" id="caps-warning" role="status">
+          <svg class="icon" aria-hidden="true"><use href="assets/icons.svg#alert"></use></svg>
+          <span data-i18n="login.caps">Caps lock is on</span>
+        </p>
+        <p class="field-message"></p>
+      </div>
+
+      <p class="login-error" id="login-error" role="alert" aria-live="assertive"></p>
+
+      <button class="btn btn-primary btn-lg" type="submit" id="login-submit" style="margin-top:4px">
+        <span class="btn-label" id="btn-submit-label">Sign in</span>
+        <span class="spinner" aria-hidden="true"></span>
+      </button>
+
+      <div class="stack" style="margin-top:12px;text-align:center;gap:8px">
+        <p class="login-hint" id="kiosk-shortcut">
+          <a href="token.html" style="font-weight:600;color:var(--accent)">🎫 Get instant token without signing in &rarr;</a>
+        </p>
+        <p class="login-hint">
+          <a href="status.html" style="color:var(--text-2)">Check turn status with Token PIN</a>
+        </p>
+      </div>
+    </form>
+
+    <!-- Feature highlight boxes (shown only on sign-in mode) -->
+    <div class="login-features" id="login-feature-boxes">
+      <div class="login-feature-box">
+        <span class="icon-big">🤖</span>
+        <strong>AI Symptom Triage</strong>
+        <span>Speak or type in EN/Hindi/Marathi</span>
+      </div>
+      <div class="login-feature-box">
+        <span class="icon-big">🎫</span>
+        <strong>Live Queue Token</strong>
+        <span>Know your slot, skip the wait</span>
+      </div>
+      <div class="login-feature-box">
+        <span class="icon-big">📱</span>
+        <strong>QR Poster Check-in</strong>
+        <span>Scan at hospital entrance</span>
+      </div>
+      <div class="login-feature-box">
+        <span class="icon-big">📞</span>
+        <strong>Coordinator Hotline</strong>
+        <span>Every token has a helpline</span>
+      </div>
+    </div>
+
+    <div class="login-success" id="login-success" hidden>
+      <svg class="icon tick-pop" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="9"/>
+        <path d="M8 12.2l2.8 2.8L16.5 9.5"/>
+      </svg>
+    </div>
+  </main>
+</body>
+</html>

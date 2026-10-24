@@ -1,0 +1,456 @@
+:root {
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-micro: 120ms;
+  --dur-std: 240ms;
+  --dur-page: 420ms;
+  --dur-hero: 700ms;
+}
+
+@keyframes enter-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes reveal-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes page-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes page-out {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+@keyframes modal-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes backdrop-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -16px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+@keyframes toast-out {
+  from {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+  to {
+    opacity: 0;
+    transform: translate(-50%, -12px);
+  }
+}
+
+@keyframes sheet-in {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes shake-x {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-6px);
+  }
+  75% {
+    transform: translateX(6px);
+  }
+}
+
+@keyframes roll-num {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes row-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes pulse-dot {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@keyframes listen-ring {
+  50% {
+    opacity: 0.35;
+    transform: scale(1.18);
+  }
+}
+
+@keyframes skeleton-shimmer {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes drift {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(4%, 6%, 0) scale(1.06);
+  }
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes tick-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes draw-line {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes wizard-in {
+  from {
+    opacity: 0;
+    transform: translateX(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+body {
+  animation: page-in var(--dur-std) var(--ease-out) both;
+}
+
+body.is-leaving {
+  animation: page-out var(--dur-std) var(--ease-out) both;
+}
+
+[data-enter] {
+  opacity: 0;
+  transform: translateY(12px);
+}
+
+[data-enter].is-entering {
+  animation: enter-up var(--dur-hero) var(--ease-out) both;
+}
+
+[data-reveal] {
+  opacity: 0;
+  transform: translateY(16px);
+}
+
+[data-reveal].is-in {
+  opacity: 1;
+  transform: translateY(0);
+  transition:
+    opacity var(--dur-page) var(--ease-out),
+    transform var(--dur-page) var(--ease-out);
+}
+
+.btn {
+  transition:
+    transform var(--dur-micro) var(--ease-out),
+    box-shadow var(--dur-std) var(--ease-out),
+    background-color var(--dur-std) var(--ease-out),
+    color var(--dur-std) var(--ease-out),
+    opacity var(--dur-std) var(--ease-out);
+}
+
+.btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-2);
+}
+
+.btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 40%, transparent);
+}
+
+.card {
+  transition:
+    box-shadow var(--dur-std) var(--ease-out),
+    transform var(--dur-std) var(--ease-out);
+}
+
+.card:hover {
+  box-shadow: var(--shadow-2);
+}
+
+.card-interactive:hover {
+  transform: scale(1.01);
+}
+
+.nav {
+  transition:
+    box-shadow var(--dur-std) var(--ease-out),
+    border-color var(--dur-std) var(--ease-out),
+    background-color var(--theme-duration) var(--ease-in-out);
+}
+
+.nav.is-scrolled {
+  border-bottom: 1px solid var(--line);
+  box-shadow: var(--shadow-1);
+}
+
+.modal-backdrop {
+  animation: backdrop-in var(--dur-std) var(--ease-out) both;
+}
+
+.modal-backdrop.is-leaving {
+  animation: backdrop-in var(--dur-std) var(--ease-out) reverse both;
+}
+
+.modal {
+  animation: modal-in var(--dur-page) var(--ease-spring) both;
+}
+
+.sheet {
+  animation: sheet-in var(--dur-page) var(--ease-spring) both;
+}
+
+.toast-host .toast {
+  animation: toast-in var(--dur-std) var(--ease-out) both;
+}
+
+.toast-host .toast.is-leaving {
+  animation: toast-out var(--dur-std) var(--ease-out) both;
+}
+
+.field.is-invalid {
+  animation: shake-x 200ms var(--ease-in-out);
+}
+
+.field-message {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+
+.field-message.is-on {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity var(--dur-std) var(--ease-out),
+    transform var(--dur-std) var(--ease-out);
+}
+
+.is-rolling {
+  animation: roll-num var(--dur-std) var(--ease-out) both;
+}
+
+.row-enter {
+  animation: row-in var(--dur-std) var(--ease-out) both;
+}
+
+.row-leave {
+  opacity: 0;
+  transform: scaleY(0.85);
+  transform-origin: top;
+  overflow: hidden;
+  transition:
+    opacity var(--dur-std) var(--ease-out),
+    transform var(--dur-std) var(--ease-out);
+}
+
+.spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid color-mix(in srgb, currentColor 25%, transparent);
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: spin 700ms linear infinite;
+}
+
+.live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--success);
+  animation: pulse-dot 1.6s var(--ease-in-out) infinite;
+}
+
+.mic-ring {
+  position: absolute;
+  inset: -8px;
+  border: 1.75px solid var(--accent);
+  border-radius: 50%;
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.mic.is-listening .mic-ring {
+  animation: listen-ring 1.4s var(--ease-in-out) infinite;
+}
+
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+}
+
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--surface) 72%, transparent),
+    transparent
+  );
+  transform: translateX(-100%);
+  animation: skeleton-shimmer 1.4s var(--ease-in-out) infinite;
+}
+
+.blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(72px);
+  opacity: 0.22;
+  pointer-events: none;
+  animation: drift 18s var(--ease-in-out) infinite;
+}
+
+.tick-pop {
+  animation: tick-pop 420ms var(--ease-spring) both;
+}
+
+.chart-draw {
+  stroke-dasharray: 1200;
+  stroke-dashoffset: 1200;
+  animation: draw-line 900ms var(--ease-out) both;
+}
+
+.wizard-step.is-visible {
+  animation: wizard-in var(--dur-std) var(--ease-out) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  [data-enter],
+  [data-reveal],
+  body {
+    opacity: 1;
+    transform: none;
+  }
+
+  .live-dot,
+  .mic-ring,
+  .skeleton::after,
+  .blob,
+  .chart-draw {
+    animation: none !important;
+  }
+
+  .chart-draw {
+    stroke-dashoffset: 0;
+  }
+
+  .blob {
+    transform: none;
+  }
+}
