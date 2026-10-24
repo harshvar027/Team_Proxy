@@ -21,6 +21,7 @@
         <div>
           <h1 class="brand-title" data-i18n="app_title">Baari (बारी)</h1>
           <span class="brand-subtitle" data-i18n="tagline">Come at your time, not at 4 AM.</span>
+          <span id="live-clock" style="font-size:0.72rem; color:var(--text-dim); font-family:var(--font-mono); display:block; margin-top:0.2rem;"></span>
         </div>
       </div>
 
@@ -79,7 +80,7 @@
         </button>
       </div>
       <div style="color:var(--text-dim); font-size:0.75rem;">
-        Patient Demo PIN: <strong style="color:#fbbf24;">1234</strong>
+        Tokens get a <strong style="color:#fbbf24;">random 4-digit PIN</strong> shown after generation
       </div>
     </div>
 
@@ -252,6 +253,7 @@
         <div id="subtab-qr-scan" class="sub-tab-content">
           <div class="card" style="max-width:720px; margin:0 auto;">
             <div class="card-header">
+              <button class="btn btn-secondary" style="margin-bottom:1rem;" onclick="BaariPatient.switchSubTab('self-service')">&larr; Back</button>
               <h2 class="card-title">📱 Scan Hospital QR to Register</h2>
             </div>
             <p style="color:var(--text-muted); font-size:0.88rem; margin-bottom:1.5rem;">
@@ -371,6 +373,7 @@
         <div id="subtab-track-status" class="sub-tab-content">
           <div class="card" style="max-width:640px; margin:0 auto;">
             <div class="card-header">
+              <button class="btn btn-secondary" style="margin-bottom:1rem;" onclick="BaariPatient.switchSubTab('self-service')">&larr; Back</button>
               <h2 class="card-title">📍 Track Your Queue Position</h2>
             </div>
             <p style="color:var(--text-muted); font-size:0.88rem; margin-bottom:1.5rem;">
@@ -403,6 +406,9 @@
            VIEW 2: STAFF CONSOLE
            ================================================================== -->
       <section id="view-staff" class="view-section">
+        <div class="view-back-bar" style="margin-bottom:1rem;">
+          <button class="btn btn-secondary" style="font-size:0.82rem; padding:0.35rem 0.9rem;" onclick="BaariApp.navigateTo('patient')" aria-label="Back to Home">&larr; Home</button>
+        </div>
         <div id="staff-login-warning" class="card" style="text-align:center; padding:3rem; display:none;">
           <div class="empty-state-icon">🔒</div>
           <h3 style="margin-bottom:0.75rem;">Staff Login Required</h3>
@@ -500,6 +506,9 @@
            VIEW 3: WAITING HALL TV DISPLAY BOARD
            ================================================================== -->
       <section id="view-display" class="view-section">
+        <div class="view-back-bar" style="margin-bottom:1rem;">
+          <button class="btn btn-secondary" style="font-size:0.82rem; padding:0.35rem 0.9rem;" onclick="BaariApp.navigateTo('patient')" aria-label="Back to Home">&larr; Home</button>
+        </div>
         <div class="card" style="margin-bottom:1.5rem;">
           <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem; border-bottom:1px solid var(--border-subtle); padding-bottom:1rem; margin-bottom:1.5rem;">
             <div style="display:flex; align-items:center; gap:0.75rem;">
@@ -550,6 +559,9 @@
            VIEW 4: HOSPITAL QR POSTER HUB
            ================================================================== -->
       <section id="view-qrhub" class="view-section">
+        <div class="view-back-bar" style="margin-bottom:1rem;">
+          <button class="btn btn-secondary" style="font-size:0.82rem; padding:0.35rem 0.9rem;" onclick="BaariApp.navigateTo('patient')" aria-label="Back to Home">&larr; Home</button>
+        </div>
         <div class="card" style="margin-bottom:1.5rem;">
           <div class="card-header">
             <div>
@@ -621,6 +633,9 @@
            VIEW 5: SIMULATION
            ================================================================== -->
       <section id="view-simulation" class="view-section">
+        <div class="view-back-bar" style="margin-bottom:1rem;">
+          <button class="btn btn-secondary" style="font-size:0.82rem; padding:0.35rem 0.9rem;" onclick="BaariApp.navigateTo('patient')" aria-label="Back to Home">&larr; Home</button>
+        </div>
         <div class="card" style="margin-bottom:1.5rem;">
           <div class="card-header">
             <div>
@@ -685,6 +700,9 @@
            VIEW 6: ADMIN CONTROL CENTER
            ================================================================== -->
       <section id="view-admin" class="view-section">
+        <div class="view-back-bar" style="margin-bottom:1rem;">
+          <button class="btn btn-secondary" style="font-size:0.82rem; padding:0.35rem 0.9rem;" onclick="BaariApp.navigateTo('patient')" aria-label="Back to Home">&#8592; Home</button>
+        </div>
         <div id="admin-access-warning" class="card" style="text-align:center; padding:3rem; display:none;">
           <div class="empty-state-icon">🔒</div>
           <h3 style="margin-bottom:0.75rem;">Administrator Privileges Required</h3>

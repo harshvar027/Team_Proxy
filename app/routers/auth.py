@@ -47,7 +47,7 @@ def login(body: LoginRequest, request: Request, response: Response, db: Session 
 
     # Check if account is locked
     if user.locked_until and user.locked_until > datetime.datetime.now(datetime.UTC):
-        remaining = (user.locked_until - datetime.datetime.now(datetime.UTC)).seconds // 60
+        remaining = int((user.locked_until - datetime.datetime.now(datetime.UTC)).total_seconds())
         log_event(
             db, "failed_login",
             actor_user_id=user.id,
@@ -56,8 +56,9 @@ def login(body: LoginRequest, request: Request, response: Response, db: Session 
         )
         db.commit()
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=generic_error,
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many attempts. Try again in 10 minutes.",
+            headers={"Retry-After": str(max(1, remaining))},
         )
 
     # Check if account is disabled
@@ -235,6 +236,15 @@ def change_password(
     response.headers["X-CSRF-Token"] = csrf_token
 
     return {"message": "Password changed successfully"}
+
+
+@router.get("/csrf")
+def get_csrf(request: Request, response: Response, current_user: User = Depends(get_current_user)):
+    """Issue a fresh CSRF header for an existing session (needed by multi-page clients)."""
+    session_token = request.cookies.get("session")
+    if session_token:
+        response.headers["X-CSRF-Token"] = create_csrf_token_signed(session_token)
+    return {"ok": True, "username": current_user.username, "role": current_user.role}
 
 
 @router.get("/me")

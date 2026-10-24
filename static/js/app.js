@@ -41,6 +41,9 @@ window.BaariApp = {
         window.speechSynthesis.getVoices();
       };
     }
+
+    // Live clock
+    this.startLiveClock();
   },
 
   // ── URL Parameters (QR scan auto-redirect) ──────────────────────────────
@@ -470,6 +473,22 @@ window.BaariApp = {
       window.speechSynthesis.cancel();
     }
     this.hideAudioVisualizer();
+  },
+
+  startLiveClock() {
+    const update = () => {
+      const el = document.getElementById("live-clock");
+      if (!el) return;
+      const now = new Date();
+      el.textContent = now.toLocaleTimeString("en-IN", {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: true,
+      });
+    };
+    update();
+    setInterval(update, 1000);
   },
 
   setupVoiceTester() {

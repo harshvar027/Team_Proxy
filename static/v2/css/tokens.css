@@ -1,0 +1,196 @@
+/* ==========================================================================
+   tokens.css — Baari Design System v2
+   All design decisions live here as CSS custom properties.
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+Devanagari:wght@400;500;600;700&display=swap');
+
+/* ── Light Theme (default) ─────────────────────────────────────────────── */
+:root {
+  /* Surfaces */
+  --bg:        #fbfbfd;
+  --surface:   #ffffff;
+  --surface-2: #f5f5f7;
+  --surface-3: #ebebed;
+
+  /* Text */
+  --text:   #1d1d1f;
+  --text-2: #6e6e73;
+  --text-3: #86868b;
+
+  /* Lines */
+  --line: rgba(0, 0, 0, .08);
+  --line-2: rgba(0, 0, 0, .04);
+
+  /* Accent */
+  --accent:       #0071e3;
+  --accent-hover: #0077ed;
+  --accent-soft:  rgba(0, 113, 227, .10);
+  --on-accent:    #ffffff;
+
+  /* Semantic */
+  --success:      #1d9b4f;
+  --success-soft: rgba(29, 155, 79, .10);
+  --warning:      #b86e00;
+  --warning-soft: rgba(184, 110, 0, .10);
+  --danger:       #d70015;
+  --danger-soft:  rgba(215, 0, 21, .10);
+
+  /* Shadows */
+  --shadow-1: 0 1px 2px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.06);
+  --shadow-2: 0 8px 30px rgba(0,0,0,.10);
+  --shadow-3: 0 20px 60px rgba(0,0,0,.14);
+
+  /* Glass */
+  --glass-bg:     color-mix(in srgb, var(--surface) 72%, transparent);
+  --glass-border: rgba(255, 255, 255, .6);
+
+  /* Radius */
+  --r-sm:   8px;
+  --r-md:  12px;
+  --r-lg:  20px;
+  --r-xl:  28px;
+  --r-pill: 999px;
+
+  /* Typography */
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
+          Inter, "Segoe UI", "Noto Sans Devanagari", Roboto, sans-serif;
+  --font-mono: "SF Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* Spacing (8px grid) */
+  --sp-1:  4px;
+  --sp-2:  8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-7: 32px;
+  --sp-8: 40px;
+  --sp-9: 48px;
+  --sp-10: 64px;
+  --sp-11: 80px;
+  --sp-12: 96px;
+
+  /* Transitions */
+  --ease-out:    cubic-bezier(.22, 1, .36, 1);
+  --ease-spring: cubic-bezier(.34, 1.56, .64, 1);
+  --ease-in-out: cubic-bezier(.65, 0, .35, 1);
+
+  --dur-micro:    120ms;
+  --dur-standard: 240ms;
+  --dur-page:     420ms;
+  --dur-hero:     700ms;
+
+  /* Component sizes */
+  --input-h:  52px;
+  --btn-h-md: 44px;
+  --btn-h-sm: 36px;
+  --btn-h-lg: 52px;
+
+  /* Nav */
+  --nav-h: 56px;
+}
+
+/* ── Dark Theme ─────────────────────────────────────────────────────────── */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg:        #000000;
+    --surface:   #1c1c1e;
+    --surface-2: #2c2c2e;
+    --surface-3: #3a3a3c;
+
+    --text:   #f5f5f7;
+    --text-2: #a1a1a6;
+    --text-3: #86868b;
+
+    --line:   rgba(255, 255, 255, .12);
+    --line-2: rgba(255, 255, 255, .06);
+
+    --accent:       #2997ff;
+    --accent-hover: #409cff;
+    --accent-soft:  rgba(41, 151, 255, .15);
+    --on-accent:    #ffffff;
+
+    --success:      #30d158;
+    --success-soft: rgba(48, 209, 88, .12);
+    --warning:      #ffd60a;
+    --warning-soft: rgba(255, 214, 10, .12);
+    --danger:       #ff453a;
+    --danger-soft:  rgba(255, 69, 58, .12);
+
+    --shadow-1: 0 1px 2px rgba(0,0,0,.20), 0 4px 16px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.06);
+    --shadow-2: 0 8px 30px rgba(0,0,0,.40), inset 0 1px 0 rgba(255,255,255,.06);
+    --shadow-3: 0 20px 60px rgba(0,0,0,.60), inset 0 1px 0 rgba(255,255,255,.06);
+
+    --glass-bg:     color-mix(in srgb, var(--surface) 72%, transparent);
+    --glass-border: rgba(255, 255, 255, .08);
+  }
+}
+
+/* Manual dark override */
+[data-theme="dark"] {
+  --bg:        #000000;
+  --surface:   #1c1c1e;
+  --surface-2: #2c2c2e;
+  --surface-3: #3a3a3c;
+
+  --text:   #f5f5f7;
+  --text-2: #a1a1a6;
+  --text-3: #86868b;
+
+  --line:   rgba(255, 255, 255, .12);
+  --line-2: rgba(255, 255, 255, .06);
+
+  --accent:       #2997ff;
+  --accent-hover: #409cff;
+  --accent-soft:  rgba(41, 151, 255, .15);
+  --on-accent:    #ffffff;
+
+  --success:      #30d158;
+  --success-soft: rgba(48, 209, 88, .12);
+  --warning:      #ffd60a;
+  --warning-soft: rgba(255, 214, 10, .12);
+  --danger:       #ff453a;
+  --danger-soft:  rgba(255, 69, 58, .12);
+
+  --shadow-1: 0 1px 2px rgba(0,0,0,.20), 0 4px 16px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.06);
+  --shadow-2: 0 8px 30px rgba(0,0,0,.40), inset 0 1px 0 rgba(255,255,255,.06);
+  --shadow-3: 0 20px 60px rgba(0,0,0,.60), inset 0 1px 0 rgba(255,255,255,.06);
+
+  --glass-bg:     color-mix(in srgb, var(--surface) 72%, transparent);
+  --glass-border: rgba(255, 255, 255, .08);
+}
+
+/* Manual light override */
+[data-theme="light"] {
+  --bg:        #fbfbfd;
+  --surface:   #ffffff;
+  --surface-2: #f5f5f7;
+  --surface-3: #ebebed;
+
+  --text:   #1d1d1f;
+  --text-2: #6e6e73;
+  --text-3: #86868b;
+
+  --line:   rgba(0, 0, 0, .08);
+  --line-2: rgba(0, 0, 0, .04);
+
+  --accent:       #0071e3;
+  --accent-hover: #0077ed;
+  --accent-soft:  rgba(0, 113, 227, .10);
+  --on-accent:    #ffffff;
+
+  --success:      #1d9b4f;
+  --success-soft: rgba(29, 155, 79, .10);
+  --warning:      #b86e00;
+  --warning-soft: rgba(184, 110, 0, .10);
+  --danger:       #d70015;
+  --danger-soft:  rgba(215, 0, 21, .10);
+
+  --shadow-1: 0 1px 2px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.06);
+  --shadow-2: 0 8px 30px rgba(0,0,0,.10);
+  --shadow-3: 0 20px 60px rgba(0,0,0,.14);
+
+  --glass-bg:     color-mix(in srgb, var(--surface) 72%, transparent);
+  --glass-border: rgba(255, 255, 255, .6);
+}

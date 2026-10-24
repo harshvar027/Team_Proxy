@@ -5,12 +5,22 @@ Mounts routers, static files, security middleware, and security headers.
 """
 
 import os
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 from app.config import settings
 from app.routers import auth, patient, staff, admin, simulation
+
+
+# ── Lifespan ───────────────────────────────────────────────────────────────
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    print(f"🏥 Baari is running at http://{settings.host}:{settings.port}")
+    print(f"   Database: {settings.database_url}")
+    yield
 
 
 # ── App ────────────────────────────────────────────────────────────────────
@@ -21,6 +31,7 @@ app = FastAPI(
     version="1.0.0",
     docs_url="/docs" if os.getenv("ENVIRONMENT") != "production" else None,
     redoc_url=None,
+    lifespan=lifespan,
 )
 
 
@@ -98,11 +109,3 @@ async def serve_spa(request: Request, full_path: str):
         content={"detail": "Frontend not built yet. Run from the baari/ directory."},
     )
 
-
-# ── Startup ────────────────────────────────────────────────────────────────
-
-@app.on_event("startup")
-async def startup_event():
-    """Log that the server has started."""
-    print(f"🏥 Baari is running at http://{settings.host}:{settings.port}")
-    print(f"   Database: {settings.database_url}")
