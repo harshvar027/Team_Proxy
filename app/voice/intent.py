@@ -78,7 +78,7 @@ def parse_department_intent(text: str) -> Optional[str]:
                 weight = 2 if len(kw) > 4 else 1
                 scores[code] += weight
 
-    best_code = max(scores, key=scores.get)
+    best_code = max(scores, key=lambda k: scores[k])
     if scores[best_code] > 0:
         return best_code
     return None

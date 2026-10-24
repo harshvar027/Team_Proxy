@@ -354,9 +354,9 @@ def get_daily_summary(
             c_at = t.called_at
             cr_at = t.created_at
             if c_at.tzinfo is None and cr_at.tzinfo is not None:
-                c_at = c_at.replace(tzinfo=datetime.UTC)
+                c_at = c_at.replace(tzinfo=datetime.timezone.utc)
             elif c_at.tzinfo is not None and cr_at.tzinfo is None:
-                cr_at = cr_at.replace(tzinfo=datetime.UTC)
+                cr_at = cr_at.replace(tzinfo=datetime.timezone.utc)
 
             wait_min = max(0.0, (c_at - cr_at).total_seconds() / 60.0)
             wait_times.append(wait_min)
@@ -367,7 +367,7 @@ def get_daily_summary(
 
     avg_wait = round(sum(wait_times) / len(wait_times), 1) if wait_times else 0.0
     longest_wait = round(max(wait_times), 1) if wait_times else 0.0
-    peak_hour = max(hourly_counts, key=hourly_counts.get) if hourly_counts else "None"
+    peak_hour = max(hourly_counts, key=lambda k: hourly_counts[k]) if hourly_counts else "None"
 
     no_show_cnt = len(no_show_tokens)
     no_show_rate = round((no_show_cnt / total_tokens * 100), 1) if total_tokens > 0 else 0.0
