@@ -1,0 +1,44 @@
+# Environment
+.env
+*.env
+
+# Database
+*.db
+*.db-shm
+*.db-wal
+backups/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+*.egg
+.venv/
+venv/
+
+# Models (large binary weights)
+models/*.bin
+models/*.pt
+models/*.onnx
+models/*.ct2/
+
+# Audio uploads (should be deleted immediately, but just in case)
+uploads/
+*.wav
+*.mp3
+*.webm
+*.ogg
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db

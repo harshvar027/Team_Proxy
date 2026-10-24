@@ -1,0 +1,29 @@
+# --- Core ---
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+pydantic==2.9.2
+pydantic-settings==2.5.2
+
+# --- Database ---
+sqlalchemy==2.0.35
+alembic==1.13.3
+aiosqlite==0.20.0
+
+# --- Security ---
+argon2-cffi==23.1.0
+python-multipart==0.0.12
+itsdangerous==2.2.0
+
+# --- Rate limiting ---
+slowapi==0.1.9
+
+# --- Voice / AI ---
+faster-whisper==1.0.3
+piper-tts==1.2.0
+
+# --- Testing ---
+pytest==8.3.3
+httpx==0.27.2
+
+# --- Utilities ---
+python-dotenv==1.0.1
