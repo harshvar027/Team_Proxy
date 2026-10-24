@@ -35,14 +35,15 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["X-XSS-Protection"] = "1; mode=block"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-        response.headers["Permissions-Policy"] = "camera=(), microphone=(self), geolocation=()"
-        # CSP: allow inline scripts/styles for our SPA, but block eval
+        response.headers["Permissions-Policy"] = "camera=(self), microphone=(self), geolocation=()"
+        # CSP: allow inline scripts/styles for our SPA, camera, audio, QR libraries
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; "
-            "script-src 'self' 'unsafe-inline'; "
+            "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com; "
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
             "font-src 'self' https://fonts.gstatic.com; "
-            "img-src 'self' data:; "
+            "img-src 'self' data: blob:; "
+            "media-src 'self' blob: data:; "
             "connect-src 'self'; "
             "frame-ancestors 'none';"
         )
@@ -59,6 +60,17 @@ app.include_router(patient.router)
 app.include_router(staff.router)
 app.include_router(admin.router)
 app.include_router(simulation.router)
+
+
+@app.api_route("/api/voice/tts", methods=["GET", "HEAD"])
+async def tts_alias(request: Request):
+    """Direct alias for neural TTS."""
+    from app.routers.patient import get_speech_audio
+    params = request.query_params
+    text = params.get("text", "")
+    lang = params.get("language", "hi")
+    voice = params.get("voice", None)
+    return await get_speech_audio(text=text, language=lang, voice=voice)
 
 
 # ── Static files ───────────────────────────────────────────────────────────

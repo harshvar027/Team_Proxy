@@ -110,11 +110,15 @@ class ResetPasswordRequest(BaseModel):
 # ── Tokens (patient queue) ────────────────────────────────────────────────
 
 class TokenRequest(BaseModel):
-    """Patient requests a new token."""
+    """Patient requests a new token (self-service kiosk or hospital QR scan)."""
     name: str = Field(..., min_length=1, max_length=100)
     department_id: int
     phone: Optional[str] = Field(default=None, max_length=20)
-    language: str = Field(default="en", pattern=r"^(en|hi|mr)$")
+    email: Optional[str] = Field(default=None, max_length=100)
+    priority_class: str = Field(default="normal", pattern=r"^(normal|priority|emergency)$")
+    priority_reason: Optional[str] = Field(default=None, max_length=255)
+    hospital_code: Optional[str] = Field(default=None, max_length=50)
+    language: str = Field(default="en", pattern=r"^(en|hi|mr|ta|te|bn)$")
 
 
 class TokenIssueByStaff(BaseModel):
@@ -122,7 +126,8 @@ class TokenIssueByStaff(BaseModel):
     name: str = Field(..., min_length=1, max_length=100)
     department_id: int
     phone: Optional[str] = Field(default=None, max_length=20)
-    language: str = Field(default="en", pattern=r"^(en|hi|mr)$")
+    email: Optional[str] = Field(default=None, max_length=100)
+    language: str = Field(default="en", pattern=r"^(en|hi|mr|ta|te|bn)$")
     priority_class: str = Field(default="normal", pattern=r"^(normal|priority|emergency)$")
     priority_reason: Optional[str] = Field(default=None, max_length=255)
 
@@ -143,6 +148,7 @@ class TokenOut(BaseModel):
     department_name: str
     patient_name: str
     phone_masked: Optional[str] = None  # last 4 digits only
+    patient_email: Optional[str] = None
     priority_class: str
     priority_reason: Optional[str] = None
     status: str

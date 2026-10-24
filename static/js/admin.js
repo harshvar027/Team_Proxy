@@ -270,4 +270,234 @@ window.BaariAdmin = {
       BaariApp.showToast(err.message, "error");
     }
   },
+
+  // ── Hospital QR Code Generation & Poster ────────────────────────────────
+  generateHospitalQR() {
+    const hospName = document.getElementById("qr-gen-hospital-name")?.value.trim() || "District Government Hospital";
+    const hospCode = document.getElementById("qr-gen-code")?.value.trim() || "BAARI-GH-MUM-001";
+    const displayContainer = document.getElementById("hospital-qr-display");
+    if (!displayContainer) return;
+
+    displayContainer.innerHTML = "";
+
+    // Build the public URL encoded in the QR code
+    const origin = window.location.origin;
+    const targetUrl = `${origin}/?qr=1&hospital=${encodeURIComponent(hospName)}&code=${encodeURIComponent(hospCode)}`;
+
+    // Create QR code using QRCode library
+    const qrDiv = document.createElement("div");
+    qrDiv.id = "admin-qrcode-canvas-wrapper";
+    qrDiv.style.background = "#ffffff";
+    qrDiv.style.padding = "16px";
+    qrDiv.style.borderRadius = "12px";
+    qrDiv.style.display = "inline-block";
+    qrDiv.style.boxShadow = "0 8px 24px rgba(0,0,0,0.2)";
+
+    displayContainer.appendChild(qrDiv);
+
+    if (window.QRCode) {
+      new QRCode(qrDiv, {
+        text: targetUrl,
+        width: 200,
+        height: 200,
+        colorDark: "#0f172a",
+        colorLight: "#ffffff",
+        correctLevel: QRCode.CorrectLevel.H,
+      });
+    } else {
+      qrDiv.innerHTML = `<div style="padding:2rem; color:#ef4444;">QRCode library not loaded</div>`;
+    }
+
+    // Action buttons under QR
+    const actionsDiv = document.createElement("div");
+    actionsDiv.style.marginTop = "1rem";
+    actionsDiv.style.display = "flex";
+    actionsDiv.style.gap = "0.5rem";
+    actionsDiv.style.justifyContent = "center";
+    actionsDiv.style.flexWrap = "wrap";
+
+    actionsDiv.innerHTML = `
+      <button class="btn btn-primary" onclick="BaariAdmin.printHospitalPoster('${hospName}', '${hospCode}', '${targetUrl}')">
+        🖨️ Print Official Poster
+      </button>
+      <button class="btn btn-secondary" onclick="BaariAdmin.copyRegistrationUrl('${targetUrl}')">
+        📋 Copy Scan URL
+      </button>
+    `;
+    displayContainer.appendChild(actionsDiv);
+
+    BaariApp.showToast(`QR Code generated for ${hospName}`, "success");
+  },
+
+  copyRegistrationUrl(url) {
+    navigator.clipboard.writeText(url).then(() => {
+      BaariApp.showToast("Registration URL copied to clipboard!", "success");
+    }).catch(() => {
+      prompt("Copy this URL:", url);
+    });
+  },
+
+  printHospitalPoster(hospName, hospCode, targetUrl) {
+    const printWin = window.open("", "_blank", "width=800,height=900");
+    if (!printWin) {
+      BaariApp.showToast("Popup blocked. Please allow popups to print poster.", "warning");
+      return;
+    }
+
+    const qrWrapper = document.getElementById("admin-qrcode-canvas-wrapper");
+    const imgEl = qrWrapper ? qrWrapper.querySelector("img") : null;
+    const canvasEl = qrWrapper ? qrWrapper.querySelector("canvas") : null;
+    let qrSrc = "";
+    if (imgEl && imgEl.src) qrSrc = imgEl.src;
+    else if (canvasEl) qrSrc = canvasEl.toDataURL("image/png");
+
+    printWin.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>OPD Queue QR Poster — ${hospName}</title>
+        <style>
+          @page { size: A4 portrait; margin: 15mm; }
+          body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            text-align: center;
+            color: #0f172a;
+            margin: 0;
+            padding: 24px;
+            background: #ffffff;
+          }
+          .poster-box {
+            border: 6px double #0284c7;
+            border-radius: 20px;
+            padding: 32px;
+            max-width: 650px;
+            margin: 0 auto;
+          }
+          .gov-badge {
+            font-size: 14px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: #0284c7;
+            margin-bottom: 8px;
+          }
+          h1 {
+            font-size: 32px;
+            font-weight: 900;
+            margin: 0 0 4px 0;
+            color: #0f172a;
+          }
+          .sub {
+            font-size: 16px;
+            color: #475569;
+            margin-bottom: 24px;
+          }
+          .qr-frame {
+            background: #ffffff;
+            border: 3px solid #0284c7;
+            padding: 20px;
+            display: inline-block;
+            border-radius: 16px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+          }
+          .qr-frame img {
+            width: 260px;
+            height: 260px;
+            display: block;
+          }
+          .steps {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 16px;
+            margin: 32px 0 24px 0;
+            text-align: left;
+          }
+          .step-card {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 12px;
+          }
+          .step-num {
+            display: inline-block;
+            background: #0284c7;
+            color: #ffffff;
+            width: 24px;
+            height: 24px;
+            line-height: 24px;
+            text-align: center;
+            border-radius: 50%;
+            font-weight: bold;
+            font-size: 12px;
+            margin-bottom: 6px;
+          }
+          .step-title {
+            font-weight: 700;
+            font-size: 14px;
+            margin-bottom: 4px;
+            color: #0f172a;
+          }
+          .step-desc {
+            font-size: 12px;
+            color: #64748b;
+          }
+          .footer {
+            font-size: 13px;
+            color: #64748b;
+            border-top: 1px solid #e2e8f0;
+            padding-top: 16px;
+          }
+          .tagline {
+            font-weight: 800;
+            color: #0284c7;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="poster-box">
+          <div class="gov-badge">PUBLIC HEALTH DEPARTMENT • OPD TOKEN SERVICE</div>
+          <h1>${hospName}</h1>
+          <div class="sub">बारी (Baari) — Digital Queue Management System</div>
+
+          <div class="qr-frame">
+            <img src="${qrSrc}" alt="Hospital OPD QR Code">
+          </div>
+
+          <div style="font-size:18px; font-weight:800; color:#0284c7; margin-top:16px;">
+            📱 स्कैन करें और अपनी बारी पाएं / Scan to Register Turn
+          </div>
+          <div style="font-size:13px; color:#64748b;">Code: <strong>${hospCode}</strong></div>
+
+          <div class="steps">
+            <div class="step-card">
+              <span class="step-num">1</span>
+              <div class="step-title">Scan QR Code</div>
+              <div class="step-desc">Open phone camera or QR scanner to open the page.</div>
+            </div>
+            <div class="step-card">
+              <span class="step-num">2</span>
+              <div class="step-title">Enter Details</div>
+              <div class="step-desc">Enter Name, Phone, and choose OPD department.</div>
+            </div>
+            <div class="step-card">
+              <span class="step-num">3</span>
+              <div class="step-title">Rest at Home</div>
+              <div class="step-desc">Get your live token, secret PIN, and arrive-by time.</div>
+            </div>
+          </div>
+
+          <div class="footer">
+            <span class="tagline">"Come at your time, not at 4 AM."</span> • Powered by Baari Open Source
+          </div>
+        </div>
+        <script>
+          window.onload = function() {
+            setTimeout(function() { window.print(); }, 400);
+          };
+        </script>
+      </body>
+      </html>
+    `);
+    printWin.document.close();
+  },
 };

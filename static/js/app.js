@@ -1,23 +1,26 @@
 /**
  * Baari — static/js/app.js
  * SPA routing, CSRF management, Web Audio chime synthesizer,
- * Speech synthesis, auth session state, and global utilities.
+ * High-Fidelity Neural TTS player via /api/voice/tts,
+ * Theme persistence (Dark/Light/High Contrast), floating particles,
+ * and global app utilities.
  */
 
-// Global App State
 window.BaariApp = {
   csrfToken: "",
   currentUser: null,
   activeView: "patient",
   audioCtx: null,
+  activeAudio: null,
 
-  // Initialize
   init() {
     this.setupRouter();
     this.setupTheme();
+    this.setupParticles();
     this.checkSession();
+    this.setupVoiceTester();
+    this.handleUrlParams();
 
-    // Language dropdown listener
     const langSelect = document.getElementById("lang-select");
     if (langSelect) {
       langSelect.value = currentLang;
@@ -25,14 +28,47 @@ window.BaariApp = {
         setLanguage(e.target.value);
         if (window.BaariPatient) window.BaariPatient.onLangChange();
         if (window.BaariStaff) window.BaariStaff.refreshQueue();
+        if (window.BaariDisplay) window.BaariDisplay.render();
       });
     }
 
     updatePageTranslations();
+
+    // Pre-load speech synthesis voices as secondary fallback
+    if ("speechSynthesis" in window) {
+      window.speechSynthesis.getVoices();
+      window.speechSynthesis.onvoiceschanged = () => {
+        window.speechSynthesis.getVoices();
+      };
+    }
+  },
+
+  // ── URL Parameters (QR scan auto-redirect) ──────────────────────────────
+  handleUrlParams() {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("qr") || params.get("hospital") || params.get("code")) {
+      this.navigateTo("patient");
+      setTimeout(() => {
+        if (window.BaariPatient && window.BaariPatient.switchSubTab) {
+          window.BaariPatient.switchSubTab("qr-scan");
+          const hospName = params.get("hospital") || "District Civil Hospital";
+          const hospCode = params.get("code") || "BAARI-GH-001";
+          const deptId = params.get("dept");
+          window.BaariPatient.applyScannedHospital(hospName, hospCode, deptId);
+        }
+      }, 200);
+    }
   },
 
   // ── Theme / Accessibility ───────────────────────────────────────────────
   setupTheme() {
+    const savedTheme = localStorage.getItem("baari_theme");
+    if (savedTheme === "light") {
+      document.body.classList.add("light-theme");
+    } else {
+      document.body.classList.remove("light-theme");
+    }
+
     const isHc = localStorage.getItem("baari_hc") === "true";
     if (isHc) document.body.classList.add("high-contrast");
 
@@ -48,7 +84,39 @@ window.BaariApp = {
     if (themeToggle) {
       themeToggle.addEventListener("click", () => {
         document.body.classList.toggle("light-theme");
+        const isLight = document.body.classList.contains("light-theme");
+        localStorage.setItem("baari_theme", isLight ? "light" : "dark");
+        this.updateThemeIcon();
       });
+      this.updateThemeIcon();
+    }
+  },
+
+  updateThemeIcon() {
+    const themeToggle = document.getElementById("toggle-theme");
+    if (!themeToggle) return;
+    const isLight = document.body.classList.contains("light-theme");
+    themeToggle.textContent = isLight ? "☀️" : "🌙";
+    themeToggle.title = isLight ? "Switch to Dark Mode" : "Switch to Light Mode";
+  },
+
+  // ── Floating Particles ──────────────────────────────────────────────────
+  setupParticles() {
+    const container = document.getElementById("particles-container");
+    if (!container) return;
+    container.innerHTML = "";
+
+    for (let i = 0; i < 24; i++) {
+      const particle = document.createElement("div");
+      particle.className = "particle";
+      particle.style.left = `${Math.random() * 100}vw`;
+      particle.style.animationDelay = `${Math.random() * 15}s`;
+      particle.style.animationDuration = `${12 + Math.random() * 18}s`;
+      particle.style.opacity = `${0.08 + Math.random() * 0.25}`;
+      const size = 1.5 + Math.random() * 3.5;
+      particle.style.width = `${size}px`;
+      particle.style.height = `${size}px`;
+      container.appendChild(particle);
     }
   },
 
@@ -62,13 +130,11 @@ window.BaariApp = {
       });
     });
 
-    // Handle hash change
     window.addEventListener("hashchange", () => {
       const hash = window.location.hash.replace("#", "") || "patient";
       this.navigateTo(hash, false);
     });
 
-    // Initial route
     const initial = window.location.hash.replace("#", "") || "patient";
     this.navigateTo(initial, false);
   },
@@ -79,12 +145,10 @@ window.BaariApp = {
       window.location.hash = viewName;
     }
 
-    // Toggle active tab button
     document.querySelectorAll(".tab-btn[data-view]").forEach((btn) => {
       btn.classList.toggle("active", btn.getAttribute("data-view") === viewName);
     });
 
-    // Toggle view section
     document.querySelectorAll(".view-section").forEach((sec) => {
       sec.classList.remove("active");
     });
@@ -94,11 +158,15 @@ window.BaariApp = {
       activeSec.classList.add("active");
     }
 
-    // Trigger lifecycle view hooks
+    // Trigger sub-view initialization
     if (viewName === "patient" && window.BaariPatient) {
       window.BaariPatient.init();
     } else if (viewName === "staff" && window.BaariStaff) {
       window.BaariStaff.init();
+    } else if (viewName === "display" && window.BaariDisplay) {
+      window.BaariDisplay.init();
+    } else if (viewName === "qrhub" && window.BaariQRHub) {
+      window.BaariQRHub.init();
     } else if (viewName === "simulation" && window.BaariSimulation) {
       window.BaariSimulation.init();
     } else if (viewName === "admin" && window.BaariAdmin) {
@@ -106,11 +174,10 @@ window.BaariApp = {
     }
   },
 
-  // ── API Fetch Wrapper (Auto CSRF & Error Handling) ───────────────────────
+  // ── API Fetch Wrapper ───────────────────────────────────────────────────
   async fetchApi(url, options = {}) {
     options.headers = options.headers || {};
 
-    // Attach CSRF token on mutating requests
     const method = (options.method || "GET").toUpperCase();
     if (["POST", "PUT", "DELETE", "PATCH"].includes(method)) {
       if (this.csrfToken) {
@@ -127,7 +194,6 @@ window.BaariApp = {
     try {
       const res = await fetch(url, options);
 
-      // Check for updated CSRF header
       const newCsrf = res.headers.get("X-CSRF-Token");
       if (newCsrf) {
         this.csrfToken = newCsrf;
@@ -145,7 +211,7 @@ window.BaariApp = {
     }
   },
 
-  // ── Session State Check ─────────────────────────────────────────────────
+  // ── Session State ───────────────────────────────────────────────────────
   async checkSession() {
     try {
       const me = await this.fetchApi("/api/me");
@@ -168,13 +234,13 @@ window.BaariApp = {
         <span class="badge ${roleBadge}">
           👤 ${this.currentUser.username}${deptInfo}
         </span>
-        <button class="btn btn-secondary" style="padding: 0.35rem 0.75rem; font-size: 0.8rem;" onclick="BaariApp.logout()">
+        <button class="btn btn-secondary" style="padding: 0.35rem 0.75rem; font-size: 0.78rem;" onclick="BaariApp.logout()">
           ${t("nav_logout")}
         </button>
       `;
     } else {
       userContainer.innerHTML = `
-        <button class="btn btn-secondary" style="padding: 0.35rem 0.75rem; font-size: 0.8rem;" onclick="BaariApp.openLoginModal()">
+        <button class="btn btn-secondary" style="padding: 0.35rem 0.75rem; font-size: 0.78rem;" onclick="BaariApp.openLoginModal()">
           ${t("nav_login")}
         </button>
       `;
@@ -208,7 +274,6 @@ window.BaariApp = {
       this.closeLoginModal();
       await this.checkSession();
 
-      // Redirect staff directly to staff console, admin to admin view
       if (res.role === "admin") {
         this.navigateTo("admin");
       } else {
@@ -231,7 +296,7 @@ window.BaariApp = {
     }
   },
 
-  // ── Web Audio Chime Synthesizer (Zero External MP3 Assets) ──────────────
+  // ── Web Audio Chimes ────────────────────────────────────────────────────
   playAnnouncementChime() {
     try {
       const AudioCtx = window.AudioContext || window.webkitAudioContext;
@@ -242,51 +307,179 @@ window.BaariApp = {
       const ctx = this.audioCtx;
       const now = ctx.currentTime;
 
-      // Two-tone airport / hospital chime (F5 -> A5)
-      const osc1 = ctx.createOscillator();
-      const gain1 = ctx.createGain();
-      osc1.type = "sine";
-      osc1.frequency.setValueAtTime(698.46, now); // F5
-      gain1.gain.setValueAtTime(0.18, now);
-      gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
-      osc1.connect(gain1);
-      gain1.connect(ctx.destination);
-      osc1.start(now);
-      osc1.stop(now + 0.6);
-
-      const osc2 = ctx.createOscillator();
-      const gain2 = ctx.createGain();
-      osc2.type = "sine";
-      osc2.frequency.setValueAtTime(880.0, now + 0.3); // A5
-      gain2.gain.setValueAtTime(0.18, now + 0.3);
-      gain2.gain.exponentialRampToValueAtTime(0.001, now + 1.2);
-      osc2.connect(gain2);
-      gain2.connect(ctx.destination);
-      osc2.start(now + 0.3);
-      osc2.stop(now + 1.2);
+      // Hospital airport announcement chime: 3 harmonious tones (F5 -> A5 -> C6)
+      const notes = [698.46, 880.00, 1046.50];
+      notes.forEach((freq, i) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(freq, now + i * 0.22);
+        gain.gain.setValueAtTime(0.18, now + i * 0.22);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.22 + 0.65);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now + i * 0.22);
+        osc.stop(now + i * 0.22 + 0.65);
+      });
     } catch (e) {
-      console.warn("Could not play audio chime:", e);
+      console.warn("Audio chime error:", e);
     }
   },
 
-  // ── Speech Synthesis (TTS Announcement) ──────────────────────────────────
-  speak(text, lang = "hi-IN") {
-    if (!("speechSynthesis" in window)) return;
-    window.speechSynthesis.cancel(); // Cancel any ongoing speech
-    const utter = new SpeechSynthesisUtterance(text);
-    utter.rate = 0.95;
-    utter.pitch = 1.0;
+  playScanBeep() {
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      if (!this.audioCtx) this.audioCtx = new AudioCtx();
+      if (this.audioCtx.state === "suspended") this.audioCtx.resume();
 
-    // Pick appropriate voice tag
-    if (lang.startsWith("mr")) {
-      utter.lang = "mr-IN";
-    } else if (lang.startsWith("hi")) {
-      utter.lang = "hi-IN";
-    } else {
-      utter.lang = "en-IN";
+      const ctx = this.audioCtx;
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(1760, now); // High A6 positive confirmation beep
+      gain.gain.setValueAtTime(0.15, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.12);
+    } catch (e) {}
+  },
+
+  // ── High-Fidelity Neural Speech Synthesis (TTS) ──────────────────────────
+  async speak(text, lang = "hi") {
+    if (!text || !text.trim()) return;
+
+    // Show floating audio visualizer
+    this.showAudioVisualizer(text);
+
+    // Play chime sound first
+    this.playAnnouncementChime();
+
+    // Map language code
+    let langKey = "hi";
+    if (typeof lang === "string") {
+      if (lang.startsWith("mr")) langKey = "mr";
+      else if (lang.startsWith("en")) langKey = "en";
+      else langKey = "hi";
     }
 
+    // Stop any existing playing audio
+    if (this.activeAudio) {
+      try {
+        this.activeAudio.pause();
+        this.activeAudio.currentTime = 0;
+      } catch (e) {}
+    }
+
+    // Slight delay after chime before speech begins
+    await new Promise((r) => setTimeout(r, 650));
+
+    try {
+      const ttsUrl = `/api/voice/tts?text=${encodeURIComponent(text.trim())}&language=${langKey}`;
+      const audio = new Audio(ttsUrl);
+      this.activeAudio = audio;
+
+      audio.onended = () => {
+        this.hideAudioVisualizer();
+      };
+      audio.onerror = () => {
+        console.warn("Neural audio streaming failed, falling back to Web Speech API.");
+        this.speakFallback(text, langKey);
+      };
+
+      await audio.play();
+    } catch (err) {
+      console.warn("Audio play blocked or offline, using Web Speech API fallback:", err);
+      this.speakFallback(text, langKey);
+    }
+  },
+
+  speakFallback(text, langKey) {
+    if (!("speechSynthesis" in window)) {
+      this.hideAudioVisualizer();
+      return;
+    }
+    window.speechSynthesis.cancel();
+
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.rate = 0.92;
+    utter.pitch = 1.05;
+    utter.volume = 1.0;
+
+    let targetLang = "hi-IN";
+    if (langKey === "mr") targetLang = "mr-IN";
+    else if (langKey === "en") targetLang = "en-IN";
+    utter.lang = targetLang;
+
+    const voices = window.speechSynthesis.getVoices();
+    if (voices.length > 0) {
+      let bestVoice = voices.find((v) => v.lang === targetLang && (v.name.includes("Google") || v.name.includes("Natural")));
+      if (!bestVoice) bestVoice = voices.find((v) => v.lang === targetLang);
+      if (!bestVoice) bestVoice = voices.find((v) => v.lang.startsWith(targetLang.split("-")[0]));
+      if (bestVoice) utter.voice = bestVoice;
+    }
+
+    utter.onend = () => this.hideAudioVisualizer();
+    utter.onerror = () => this.hideAudioVisualizer();
+
     window.speechSynthesis.speak(utter);
+  },
+
+  showAudioVisualizer(text) {
+    let viz = document.getElementById("audio-visualizer-badge");
+    if (!viz) {
+      viz = document.createElement("div");
+      viz.id = "audio-visualizer-badge";
+      viz.className = "audio-visualizer-badge";
+      document.body.appendChild(viz);
+    }
+
+    viz.innerHTML = `
+      <div class="audio-waves">
+        <span class="bar bar-1"></span>
+        <span class="bar bar-2"></span>
+        <span class="bar bar-3"></span>
+        <span class="bar bar-4"></span>
+      </div>
+      <div class="audio-text-preview">
+        <strong style="color:var(--color-primary-light,#818cf8);">🔊 Neural Voice:</strong>
+        <span style="max-width:280px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:inline-block; vertical-align:bottom; margin-left:4px;">
+          ${text}
+        </span>
+      </div>
+      <button class="audio-stop-btn" onclick="BaariApp.stopSpeaking()" title="Stop Audio">✕</button>
+    `;
+    viz.classList.add("visible");
+  },
+
+  hideAudioVisualizer() {
+    const viz = document.getElementById("audio-visualizer-badge");
+    if (viz) viz.classList.remove("visible");
+  },
+
+  stopSpeaking() {
+    if (this.activeAudio) {
+      try {
+        this.activeAudio.pause();
+      } catch (e) {}
+    }
+    if ("speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+    }
+    this.hideAudioVisualizer();
+  },
+
+  setupVoiceTester() {
+    // Allows testing speech easily
+    window.testBaariSpeech = (lang = "hi") => {
+      let sample = "नमस्ते, आपका टोकन नंबर G-04 है। कृपया केबिन नंबर 2 में जाएं।";
+      if (lang === "en") sample = "Hello! Token number G-04, please proceed to Doctor Cabin 2.";
+      else if (lang === "mr") sample = "नमस्कार, आपला टोकन क्रमांक जी-०४ आहे. कृपया केबिन २ मध्ये जावे.";
+      this.speak(sample, lang);
+    };
   },
 
   // ── Toast Notifications ─────────────────────────────────────────────────
@@ -296,15 +489,16 @@ window.BaariApp = {
 
     const toast = document.createElement("div");
     toast.className = `toast toast-${type}`;
-    const icon = type === "success" ? "✓" : type === "error" ? "✕" : "ℹ";
-    toast.innerHTML = `<span>${icon}</span> <span>${message}</span>`;
+    const icons = { success: "✓", error: "✕", info: "ℹ", warning: "⚠" };
+    toast.innerHTML = `<span style="font-weight:800;">${icons[type] || "ℹ"}</span> <span>${message}</span>`;
     container.appendChild(toast);
 
     setTimeout(() => {
       toast.style.opacity = "0";
-      toast.style.transition = "opacity 0.3s ease";
+      toast.style.transform = "translateX(40px)";
+      toast.style.transition = "all 0.3s ease";
       setTimeout(() => toast.remove(), 300);
-    }, 4000);
+    }, 4500);
   },
 };
 

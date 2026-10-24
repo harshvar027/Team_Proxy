@@ -5,7 +5,7 @@ voice intent parsing, and local transcription.
 """
 
 import datetime
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, status
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Query, Response, status
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from app.dependencies import get_db, get_current_user_optional
@@ -34,6 +34,7 @@ from app.voice import (
     extract_patient_name,
     transcribe_audio_file,
 )
+from app.voice.tts import synthesize_speech_edge
 
 router = APIRouter(prefix="/api/patient", tags=["patient"])
 
@@ -89,6 +90,7 @@ def _build_token_out(token: Token, db: Session, plaintext_pin: str | None = None
         department_name=dept.name,
         patient_name=token.patient.name,
         phone_masked=_mask_phone(token.patient.phone),
+        patient_email=token.patient.email,
         priority_class=token.priority_class,
         priority_reason=token.priority_reason,
         status=token.status,
@@ -154,6 +156,7 @@ def request_token(
     patient = Patient(
         name=clean_name,
         phone=body.phone.strip() if body.phone else None,
+        email=body.email.strip() if body.email else None,
         language=body.language,
     )
     db.add(patient)
@@ -163,13 +166,17 @@ def request_token(
     pin = generate_pin()
     pin_h = hash_pin(pin)
 
+    # Priority determination
+    p_class = body.priority_class if body.priority_class in ["priority", "emergency"] else "normal"
+    p_reason = body.priority_reason if p_class != "normal" else None
+
     token = Token(
         number=next_num,
         service_date=today,
         department_id=dept.id,
         patient_id=patient.id,
-        priority_class="normal",
-        priority_reason=None,
+        priority_class=p_class,
+        priority_reason=p_reason,
         status="waiting",
         pin_hash=pin_h,
         issued_by_user_id=current_user.id if current_user else None,
@@ -307,3 +314,28 @@ async def transcribe_voice(
         "patient_name": detected_name,
         "department": matched_dept,
     }
+
+
+@router.api_route("/voice/tts", methods=["GET", "HEAD"])
+async def get_speech_audio(
+    text: str = Query(..., min_length=1, max_length=1000),
+    language: str = Query(default="hi"),
+    voice: str | None = Query(default=None),
+):
+    """
+    High-fidelity neural text-to-speech audio endpoint.
+    Streams natural MP3 audio using Edge-TTS with instant disk caching.
+    """
+    audio_data = await synthesize_speech_edge(text, language=language, voice=voice)
+    if not audio_data:
+        raise HTTPException(status_code=500, detail="Speech synthesis failed or offline")
+
+    return Response(
+        content=audio_data,
+        media_type="audio/mpeg",
+        headers={
+            "Cache-Control": "public, max-age=86400",
+            "Content-Disposition": 'inline; filename="speech.mp3"',
+            "Accept-Ranges": "bytes",
+        },
+    )

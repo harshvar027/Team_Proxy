@@ -69,13 +69,14 @@ class User(Base):
 
 
 class Patient(Base):
-    """Minimal patient record — name and optional phone only. No health data."""
+    """Minimal patient record — name and optional phone/email. No health data."""
     __tablename__ = "patients"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String(100), nullable=False)
     phone = Column(String(20), nullable=True)
-    language = Column(String(5), nullable=False, default="en")  # en, hi, mr
+    email = Column(String(100), nullable=True)
+    language = Column(String(10), nullable=False, default="en")  # en, hi, mr
 
     tokens = relationship("Token", back_populates="patient", lazy="dynamic")
 
